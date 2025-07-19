@@ -1,0 +1,38 @@
+# Basic values ---
+ONE: "1"
+TWO: "2"
+X: "x"
+Y: "y"
+
+value: ONE
+| TWO
+| X
+| Y
+
+
+# Operators --- 
+PLUS: "+"
+MINUS: "-"
+TIMES: "*"
+DIV: "div"
+MOD: "mod"
+
+operator: PLUS
+| MINUS
+| TIMES
+| DIV 
+| MOD
+
+expr: term ( operator expr )* 
+
+term: factor ( operator term )*
+
+factor: "(" expr ")" 
+| value 
+
+# Declare the parenthesis as terminals 
+OPAR: "("
+CPAR: ")"
+
+%import common.WS
+%ignore WS
