@@ -25,7 +25,7 @@ def loop2 (f g : ℤ → ℤ → ℤ) (a : ℕ) (b c : ℤ) : ℤ :=
   | n + 1 =>
     loop2 f g n (f b c) (g b c)
 
-def N : ℕ := 100000
+def N : ℕ := 1000
 
 def compr (f : ℕ → ℤ → ℤ) (a : ℕ) : ℤ :=
   match a with
@@ -40,6 +40,12 @@ def g (x : ℕ) : ℤ :=
       (fun _ y => div y 2)
       x 0 x
   ) x
+
+theorem foo : g 0 = 0 := by
+  decide +kernel
+
+theorem foo2 : g 3 = 4 := by
+  decide +kernel
 
 #eval g 0
 #eval g 1
