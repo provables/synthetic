@@ -80,11 +80,9 @@ syntax "OEIS% " oeis_synth : term
   | `(OEIS% compr(\(x,y).$f,$a)) => `(T.Compr (.Lam (OEIS% $f) (OEIS% $a)))
   | `(OEIS% ($a)) => `(OEIS% $a)
 
---def loop1 (f : ℤ → ℤ → ℤ) (a : ℤ) (b : ℤ) : ℤ := 0
-
 #eval do
+  --let stx ← `(OEIS% if (1 + 2) ≤ 0 then (x + y) else 0)
   let stx ← `(OEIS% loop(\(x,y).x, (x + y), 1))
   let u : Q(T) ← elabTerm stx q(T)
   let v : T ← Meta.evalExpr T q(T) u
-  --let stx ← `(OEIS% if (1 + 2) ≤ 0 then (x + y) else 0)
   dbg_trace (repr v)
