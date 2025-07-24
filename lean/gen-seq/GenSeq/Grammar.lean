@@ -57,39 +57,43 @@ syntax "(" oeis_synth ")" : oeis_synth
 
 syntax "OEIS% " oeis_synth : term
 
- macro_rules
-  | `(OEIS% $n:num) =>
+partial def toT : TSyntax `oeis_synth → Option T
+  | `(oeis_synth| $n:num) =>
     match n.getNat with
-    | 0 => `(T.Atom .Zero)
-    | 1 => `(T.Atom .One)
-    | 2 => `(T.Atom .Two)
-    | _ => Macro.throwUnsupported
-  | `(OEIS% x) => `(T.Atom .X)
-  | `(OEIS% y) => `(T.Atom .Y)
-  | `(OEIS% $a + $b) => `(T.Add (OEIS% $a) (OEIS% $b))
-  | `(OEIS% $a - $b) => `(T.Sub (OEIS% $a) (OEIS% $b))
-  | `(OEIS% $a * $b) => `(T.Mul (OEIS% $a) (OEIS% $b))
-  | `(OEIS% $a div $b) => `(T.Div (OEIS% $a) (OEIS% $b))
-  | `(OEIS% $a mod $b) => `(T.Mod (OEIS% $a) (OEIS% $b))
-  | `(OEIS% if $a ≤ $n then $b else $c) =>
+    | 0 => T.Atom .Zero
+    | 1 => T.Atom .One
+    | 2 => T.Atom .Two
+    | _ => none
+  | `(oeis_synth| x) => T.Atom .X
+  | `(oeis_synth| y) => T.Atom .Y
+  | `(oeis_synth| $a + $b) => do T.Add (← toT a) (← toT b)
+  | `(oeis_synth| $a - $b) => do T.Sub (← toT a) (← toT b)
+  | `(oeis_synth| $a * $b) => do T.Mul (← toT a) (← toT b)
+  | `(oeis_synth| $a div $b) => do T.Div (← toT a) (← toT b)
+  | `(oeis_synth| $a mod $b) => do T.Mod (← toT a) (← toT b)
+  | `(oeis_synth| if $a ≤ $n then $b else $c) =>
     match n.getNat with
-    | 0 => `(T.Cond (OEIS% $a) (OEIS% $b) (OEIS% $c))
-    | _ => Macro.throwUnsupported
-  | `(OEIS% loop(\(x,y).$f,$a,$b)) => `(T.Loop (.Lam (OEIS% $f)) (OEIS% $a) (OEIS% $b))
-  | `(OEIS% loop2(\(x,y).$f1,\(x,y).$f2,$a,$b,$c)) =>
-    `(T.Loop2 (.Lam (OEIS% $f1)) (.Lam (OEIS% $f2) (OEIS% $a) (OEIS% $b) (OEIS% $c)))
-  | `(OEIS% compr(\(x,y).$f,$a)) => `(T.Compr (.Lam (OEIS% $f) (OEIS% $a)))
-  | `(OEIS% ($a)) => `(OEIS% $a)
+    | 0 => do T.Cond (← toT a) (← toT b) (← toT c)
+    | _ => none
+  | `(oeis_synth| loop(\(x,y).$f,$a,$b)) => do T.Loop (.Lam (← toT f)) (← toT a) (← toT b)
+  | `(oeis_synth| loop2(\(x,y).$f1,\(x,y).$f2,$a,$b,$c)) =>
+    do T.Loop2 (.Lam (← toT f1)) (.Lam (← toT f2)) (← toT a) (← toT b) (← toT c)
+  | `(oeis_synth| compr(\(x,y).$f,$a)) => do T.Compr (.Lam (← toT f)) (← toT a)
+  | `(oeis_synth| ($a)) => toT a
+  | _ => none
 
-def parse (s : String) : Elab.TermElabM T := do
+unsafe def parse (s : String) : Elab.TermElabM T := do
   let env ← getEnv
   let t : Syntax ← Lean.ofExcept (Lean.Parser.runParserCategory env `oeis_synth s)
-  return .Atom .Zero
+  let ts := match t with
+    | `(oeis_synth| $k) => k
+  match toT ts with
+  | some result => return result
+  | _ => throwError m!"parse error: {s}"
 
-#eval do
-  --let stx ← `(OEIS% if (1 + 2) ≤ 0 then (x + y) else 0)
-  --let stx ← `(OEIS% loop(\(x,y).x, (x + y), 1))
-  let stx ← `(OEIS% (loop(\(x,y).1 + (x + x), x, x)))
-  let u : Q(T) ← elabTerm stx q(T)
-  let v : T ← Meta.evalExpr T q(T) u
-  dbg_trace (repr v)
+-- #eval do
+--   --let stx ← `(OEIS% if (1 + 2) ≤ 0 then (x + y) else 0)
+--   --let stx ← `(OEIS% loop(\(x,y).x, (x + y), 1))
+--   let s := "x"
+--   let z ← parse s
+--   dbg_trace (repr z)
