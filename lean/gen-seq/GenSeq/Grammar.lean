@@ -20,6 +20,7 @@ inductive F
 
 inductive T
   | Atom (a : Atom)
+  | Fun (f : T)
   -- t1 + t2
   | Add (t1 t2 : T)
   -- t1 - t2
@@ -47,7 +48,7 @@ syntax func := "\\(x,y)." oeis_synth
 syntax num : oeis_synth
 syntax "x" : oeis_synth
 syntax "y" : oeis_synth
-syntax oeis_synth ("+" <|> "-" <|> "*" <|> "/" <|> "mod") oeis_synth : oeis_synth
+syntax oeis_synth ("+" <|> "-" <|> "*" <|> "div" <|> "mod") oeis_synth : oeis_synth
 syntax "if" oeis_synth "≤" num &"then" oeis_synth &"else" oeis_synth : oeis_synth
 syntax "loop" "(" func "," oeis_synth "," oeis_synth ")" : oeis_synth
 syntax "loop2" "(" func "," func "," oeis_synth "," oeis_synth "," oeis_synth ")" : oeis_synth
@@ -68,7 +69,7 @@ syntax "OEIS% " oeis_synth : term
   | `(OEIS% $a + $b) => `(T.Add (OEIS% $a) (OEIS% $b))
   | `(OEIS% $a - $b) => `(T.Sub (OEIS% $a) (OEIS% $b))
   | `(OEIS% $a * $b) => `(T.Mul (OEIS% $a) (OEIS% $b))
-  | `(OEIS% $a / $b) => `(T.Div (OEIS% $a) (OEIS% $b))
+  | `(OEIS% $a div $b) => `(T.Div (OEIS% $a) (OEIS% $b))
   | `(OEIS% $a mod $b) => `(T.Mod (OEIS% $a) (OEIS% $b))
   | `(OEIS% if $a ≤ $n then $b else $c) =>
     match n.getNat with
@@ -80,9 +81,15 @@ syntax "OEIS% " oeis_synth : term
   | `(OEIS% compr(\(x,y).$f,$a)) => `(T.Compr (.Lam (OEIS% $f) (OEIS% $a)))
   | `(OEIS% ($a)) => `(OEIS% $a)
 
+def parse (s : String) : Elab.TermElabM T := do
+  let env ← getEnv
+  let t : Syntax ← Lean.ofExcept (Lean.Parser.runParserCategory env `oeis_synth s)
+  return .Atom .Zero
+
 #eval do
   --let stx ← `(OEIS% if (1 + 2) ≤ 0 then (x + y) else 0)
-  let stx ← `(OEIS% loop(\(x,y).x, (x + y), 1))
+  --let stx ← `(OEIS% loop(\(x,y).x, (x + y), 1))
+  let stx ← `(OEIS% (loop(\(x,y).1 + (x + x), x, x)))
   let u : Q(T) ← elabTerm stx q(T)
   let v : T ← Meta.evalExpr T q(T) u
   dbg_trace (repr v)
