@@ -102,7 +102,7 @@ mutual
 partial def binOp (indent : ℕ) (t1 t2 : T) (op : String) : String :=
   let s1 := TtoLeanAux indent t1
   let s2 := TtoLeanAux indent t2
-  s!"{s1} {op} {s2}"
+  s!"({s1} {op} {s2})"
 
 partial def TtoLeanAux (indent: ℕ) (t : T) : String :=
   match t with
@@ -132,7 +132,7 @@ partial def TtoLeanAux (indent: ℕ) (t : T) : String :=
   | .Compr (.Lam f) t1 =>
     let sf := TtoLeanAux indent f
     let s1 := TtoLeanAux indent t1
-    s!"comprN (λ(x : ℤ) ↦ {sf}) ({s1})"
+    s!"comprN (λ(x : ℕ) ↦ {sf}) ({s1})"
 end
 
 def TtoLean (name : String) (offst : ℕ) (t : T) : String :=
