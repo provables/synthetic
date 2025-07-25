@@ -52,6 +52,7 @@ end
 declare_syntax_cat oeis_synth (behavior := symbol)
 
 syntax func := "\\(x,y)." oeis_synth
+syntax func1 := "\\x." oeis_synth
 syntax num : oeis_synth
 syntax "x" : oeis_synth
 syntax "y" : oeis_synth
@@ -59,7 +60,7 @@ syntax oeis_synth ("+" <|> "-" <|> "*" <|> "div" <|> "mod") oeis_synth : oeis_sy
 syntax "if" oeis_synth "≤" num &"then" oeis_synth &"else" oeis_synth : oeis_synth
 syntax "loop" "(" func "," oeis_synth "," oeis_synth ")" : oeis_synth
 syntax "loop2" "(" func "," func "," oeis_synth "," oeis_synth "," oeis_synth ")" : oeis_synth
-syntax "compr" "(" func "," oeis_synth ")" : oeis_synth
+syntax "compr" "(" func1 "," oeis_synth ")" : oeis_synth
 syntax "(" oeis_synth ")" : oeis_synth
 
 syntax "OEIS% " oeis_synth : term
@@ -85,7 +86,7 @@ partial def toT : TSyntax `oeis_synth → Except String T
   | `(oeis_synth| loop(\(x,y).$f,$a,$b)) => do .ok <| T.Loop (.Lam (← toT f)) (← toT a) (← toT b)
   | `(oeis_synth| loop2(\(x,y).$f1,\(x,y).$f2,$a,$b,$c)) =>
     do .ok <| T.Loop2 (.Lam (← toT f1)) (.Lam (← toT f2)) (← toT a) (← toT b) (← toT c)
-  | `(oeis_synth| compr(\(x,y).$f,$a)) => do .ok <| T.Compr (.Lam (← toT f)) (← toT a)
+  | `(oeis_synth| compr(\x.$f,$a)) => do .ok <| T.Compr (.Lam (← toT f)) (← toT a)
   | `(oeis_synth| ($a)) => toT a
   | r => .error s!"unsupported syntax {r}"
 
