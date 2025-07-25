@@ -67,10 +67,10 @@ theorem loop2_out (f g : ℤ → ℤ → ℤ) (a : ℕ) (b c : ℤ) :
 
 def N : ℕ := 1000
 
-def comprN (f : ℕ → ℤ → ℤ) (a : ℕ) : ℤ :=
+def comprN (f : ℕ → ℤ) (a : ℕ) : ℤ :=
   match a with
-  | 0 => List.range N |>.find? (f · 0 ≤ 0) |>.getD N
-  | n + 1 => List.range N |>.find? (fun (i : ℕ) => comprN f n < i ∧ f i 0 ≤ 0) |>.getD N
+  | 0 => List.range N |>.find? (f · ≤ 0) |>.getD N
+  | n + 1 => List.range N |>.find? (fun (i : ℕ) => comprN f n < i ∧ f i ≤ 0) |>.getD N
 
 def comprP (f : ℕ → ℤ) (b : ℤ → ℕ) (hb : ∀ n : ℕ, n < b n ∧ f (b n) ≤ 0) (a : ℕ) : ℤ :=
   match a with
@@ -146,7 +146,7 @@ theorem bound_spec (n : ℕ) : n < bound n ∧ p (bound n) ≤ 0 := by
 -- https://github.com/Anon52MI4/oeis-alien
 -- A3714: compr (loop2 ((((y div 2) * y) mod 2) + x) (y div 2) x 0 x) x
 def g (x : ℕ) : ℤ :=
-  comprN (fun x _ =>
+  comprN (fun x =>
     loop2
       (fun x y => add (mod (mul (div y 2) y) 2) x)
       (fun _ y => div y 2)
