@@ -67,12 +67,12 @@ theorem loop2_out (f g : ℤ → ℤ → ℤ) (a : ℕ) (b c : ℤ) :
 
 def N : ℕ := 1000
 
-def comprN (f : ℕ → ℤ) (a : ℕ) : ℤ :=
+def comprN (f : ℤ → ℤ) (a : ℕ) : ℤ :=
   match a with
   | 0 => List.range N |>.find? (f · ≤ 0) |>.getD N
   | n + 1 => List.range N |>.find? (fun (i : ℕ) => comprN f n < i ∧ f i ≤ 0) |>.getD N
 
-def comprP (f : ℕ → ℤ) (b : ℤ → ℕ) (hb : ∀ n : ℕ, n < b n ∧ f (b n) ≤ 0) (a : ℕ) : ℤ :=
+def comprP (f : ℤ → ℤ) (b : ℤ → ℕ) (hb : ∀ n : ℕ, n < b n ∧ f (b n) ≤ 0) (a : ℕ) : ℤ :=
   match a with
   | 0 => List.range (b 0) |>.find? (f · ≤ 0) |>.getD (b 0)
   | n + 1 =>
