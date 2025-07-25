@@ -133,7 +133,7 @@ partial def TtoLeanAux (indent: ℕ) (t : T) : String :=
   | .Compr (.Lam f) t1 =>
     let sf := TtoLeanAux indent f
     let s1 := TtoLeanAux indent t1
-    s!"comprN (λ(x : ℕ) ↦ {sf}) ({s1})"
+    s!"comprN (λ(x : ℤ) ↦ {sf}) ({s1})"
 end
 
 def TtoLean (name : String) (offst : ℕ) (t : T) : String :=
