@@ -86,7 +86,9 @@ def comprN (f : ℤ → ℤ) (a : ℤ) : ℤ :=
   match a with
   | .negSucc _ => 0
   | .ofNat 0 => List.range N |>.find? (f · ≤ 0) |>.getD N
-  | .ofNat (n + 1) => List.range N |>.find? (fun (i : ℕ) => comprN f n < i ∧ f i ≤ 0) |>.getD N
+  | .ofNat (n + 1) =>
+    let x := comprN f n
+    List.range N |>.find? (fun (i : ℕ) => x < i ∧ f i ≤ 0) |>.getD N
 termination_by Int.natAbs a
 
 @[reducible]
