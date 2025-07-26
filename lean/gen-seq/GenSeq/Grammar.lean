@@ -57,7 +57,7 @@ syntax num : oeis_synth
 syntax "x" : oeis_synth
 syntax "y" : oeis_synth
 syntax oeis_synth ("+" <|> "-" <|> "*" <|> "div" <|> "mod") oeis_synth : oeis_synth
-syntax "if" oeis_synth "≤" num &"then" oeis_synth &"else" oeis_synth : oeis_synth
+syntax "if" oeis_synth "<=" num &"then" oeis_synth &"else" oeis_synth : oeis_synth
 syntax "loop" "(" func "," oeis_synth "," oeis_synth ")" : oeis_synth
 syntax "loop2" "(" func "," func "," oeis_synth "," oeis_synth "," oeis_synth ")" : oeis_synth
 syntax "compr" "(" func1 "," oeis_synth ")" : oeis_synth
@@ -79,7 +79,7 @@ partial def toT : TSyntax `oeis_synth → Except String T
   | `(oeis_synth| $a * $b) => do .ok <| T.Mul (← toT a) (← toT b)
   | `(oeis_synth| $a div $b) => do .ok <| T.Div (← toT a) (← toT b)
   | `(oeis_synth| $a mod $b) => do .ok <| T.Mod (← toT a) (← toT b)
-  | `(oeis_synth| if $a ≤ $n then $b else $c) =>
+  | `(oeis_synth| if $a <= $n then $b else $c) =>
     match n.getNat with
     | 0 => do .ok <| T.Cond (← toT a) (← toT b) (← toT c)
     | _ => .error "only `if T ≤ 0 then T else T` is supported"
