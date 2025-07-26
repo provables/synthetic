@@ -97,8 +97,9 @@ def comprP (f : ℤ → ℤ) (b : ℤ → ℕ) (hb : ∀ n : ℕ, n < b n ∧ f 
   | .negSucc _ => 0
   | .ofNat 0 => List.range (b 0) |>.find? (f · ≤ 0) |>.getD (b 0)
   | .ofNat (n + 1) =>
-    let N := b (comprP f b hb n)
-    List.range N |>.find? (fun (i : ℕ) => comprP f b hb n < i ∧ f i ≤ 0) |>.getD N
+    let x := comprP f b hb n
+    let N := b x
+    List.range N |>.find? (fun (i : ℕ) => x < i ∧ f i ≤ 0) |>.getD N
 termination_by Int.natAbs a
 
 end Synth
