@@ -3,7 +3,7 @@ import GenSeq
 
 open Synth
 
-def p (x : ℕ) : ℤ :=
+def p (x : ℤ) : ℤ :=
   loop2
     (fun x y => (((y / 2) * y) % 2) + x)
     (fun _ y => y / 2)
@@ -16,35 +16,45 @@ theorem p_eq_zero_of_pow (n : ℕ) : p (2 ^ n) = 0 := by
       (fun x y ↦ y / 2)
       u 0 0 = 0 := by
     intro u
-    induction u with
-    | zero => simp
-    | succ n ih =>
-      simp
-      exact ih
+    match u with
+    | .negSucc _ => reduce; rfl
+    | .ofNat u =>
+      induction u with
+      | zero => reduce; rfl
+      | succ n ih =>
+        simp
+        unfold loop2
+        exact ih
+
   have : ∀ m u, loop2
       (fun x y ↦ (((y / 2) * y) % 2) + x)
       (fun x y ↦ y / 2)
       u 0 (2 ^ m) = 0 := by
     intro m u
-    induction u generalizing m with
-    | zero => simp
-    | succ m' ih =>
-      simp
-      have t1 : (2 : ℤ) ^ m / 2 * 2 ^ m % 2 = 0 := by
-        cases m with
-        | zero => simp
-        | succ u =>
-          simp
-          exact Dvd.dvd.mul_left (by exact dvd_pow_self (2 : ℤ) (by linarith)) _
-      by_cases hhm : m = 0
-      · simp [hhm]
-        exact this m'
-      · have t2 : ((2 : ℤ) ^ m) / 2 = 2 ^ (m - 1) := by
-          norm_cast
-          nth_rw 2 [show 2 = 2 ^ 1 by rfl]
-          refine Nat.pow_div (by omega) (by linarith)
-        rw [t1, t2]
-        exact ih _
+    match u with
+    | .negSucc _ => reduce; rfl
+    | .ofNat u =>
+      induction u generalizing m with
+      | zero => reduce; rfl
+      | succ m' ih =>
+        simp
+        unfold loop2
+        have t1 : (2 : ℤ) ^ m / 2 * 2 ^ m % 2 = 0 := by
+          cases m with
+          | zero => simp
+          | succ u =>
+            simp
+            exact Dvd.dvd.mul_left (by exact dvd_pow_self (2 : ℤ) (by linarith)) _
+        by_cases hhm : m = 0
+        · simp [hhm]
+          exact this m'
+        · have t2 : ((2 : ℤ) ^ m) / 2 = 2 ^ (m - 1) := by
+            norm_cast
+            nth_rw 2 [show 2 = 2 ^ 1 by rfl]
+            refine Nat.pow_div (by omega) (by linarith)
+          rw [t1, t2]
+          exact ih _
+
   exact this _ _
 
 def bound (n : ℤ) : ℕ :=
