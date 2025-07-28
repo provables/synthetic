@@ -90,14 +90,12 @@ partial def toT : TSyntax `oeis_synth → Except String T
   | `(oeis_synth| ($a)) => toT a
   | r => .error s!"unsupported syntax {r}"
 
-def parse (s : String) : Elab.TermElabM T := do
+def parse (s : String) : Elab.TermElabM (Except String T) := do
   let env ← getEnv
-  let t : Syntax ← Lean.ofExcept (Lean.Parser.runParserCategory env `oeis_synth s)
-  let ts := match t with
-    | `(oeis_synth| $k) => k
-  match toT ts with
-  | .ok result => return result
-  | .error msg => throwError m!"parse error: {msg}"
+  return Lean.Parser.runParserCategory env `oeis_synth s >>= (fun t =>
+    toT <| match t with
+      | `(oeis_synth| $k) => k
+  )
 
 mutual
 partial def binOp (indent : ℕ) (t1 t2 : T) (op : String) : String :=
@@ -138,3 +136,6 @@ end
 
 def TtoLean (name : String) (offst : ℕ) (t : T) : String :=
   s!"def {name} (n : ℕ) : ℤ :=\n  let x := n - {offst}\n  {TtoLeanAux 0 t}"
+
+def DSLToLean (name source : String) (offst : ℕ) : TermElabM (Except String String) := do
+  return (← parse source).map (TtoLean name offst ·)
