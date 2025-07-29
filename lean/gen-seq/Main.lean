@@ -58,7 +58,7 @@ def process_data (input : String) : GenSeqT IO String := do
       ("status", Json.bool false),
       ("error", s)
     ]
-  return s!"{y}"
+  return s!"{y}\n"
 
 def process_client (socket : Internal.UV.TCP.Socket) : GenSeqT IO UInt32 := do
   while true do
