@@ -38,14 +38,12 @@ def process_json (obj : Json) : GenSeqT IO (Except String Json) := do
     let offst ← obj.getObjValAs? Nat "offset" |>.mapError (s!"missing offset: {·}")
     let source ← obj.getObjValAs? String "source" |>.mapError (s!"missing source: {·}")
     return toLean name source offst >>= (fun o =>
-      let u := o.map (fun v =>
-        let j := Json.mkObj [
+      pure <| o.map (fun v =>
+        Json.mkObj [
           ("status", Json.bool true),
           ("lean", v),
           ("error", Json.null)
-        ]
-        j)
-      pure u)
+        ]))
 
 def process_data (input : String) : GenSeqT IO String := do
   let x ← runExcept <| Lean.Json.parse input >>= (fun r => pure <| process_json r)
@@ -56,7 +54,7 @@ def process_data (input : String) : GenSeqT IO String := do
       ("status", Json.bool false),
       ("error", s)
     ]
-  return s!"{y}\n"
+  return s!"{y.compress}\n"
 
 def process_client (socket : Internal.UV.TCP.Socket) : GenSeqT IO UInt32 := do
   while true do
@@ -118,7 +116,6 @@ def run (p : Parsed) : IO UInt32 := do
   let env ← importModules (modules.map ({module := ·})) {} (trustLevel := 1024) (loadExts := true)
   let ctx : Core.Context := {fileName := "", fileMap := default}
   let state : Core.State := {env}
-
   let port := p.flag? "port" |>.map (·.as! Nat) |>.getD 8000
   GenSeqT.run (run_server port) env ctx state
 
