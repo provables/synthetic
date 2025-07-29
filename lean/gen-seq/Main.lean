@@ -33,11 +33,11 @@ def toLean (name source : String) (offst : Nat) : GenSeqT IO (Except String Stri
     TermElabM.run' (DSLToLean name source offst)
 
 def process_json (obj : Json) : GenSeqT IO (Except String Json) := do
-  let data := do
+  return ← runExcept do
     let name ← obj.getObjValAs? String "name" |>.mapError (s!"missing name: {·}")
     let offst ← obj.getObjValAs? Nat "offset" |>.mapError (s!"missing offset: {·}")
     let source ← obj.getObjValAs? String "source" |>.mapError (s!"missing source: {·}")
-    let x := toLean name source offst >>= (fun o =>
+    return toLean name source offst >>= (fun o =>
       let u := o.map (fun v =>
         let j := Json.mkObj [
           ("status", Json.bool true),
@@ -46,8 +46,6 @@ def process_json (obj : Json) : GenSeqT IO (Except String Json) := do
         ]
         j)
       pure u)
-    return x
-  return (← runExcept data)
 
 def process_data (input : String) : GenSeqT IO String := do
   let x ← runExcept <| Lean.Json.parse input >>= (fun r => pure <| process_json r)
@@ -62,8 +60,7 @@ def process_data (input : String) : GenSeqT IO String := do
 
 def process_client (socket : Internal.UV.TCP.Socket) : GenSeqT IO UInt32 := do
   while true do
-    let d ← socket.recv? 65536
-    let reader_task := d.result!
+    let reader_task := (← socket.recv? 65536).result!
     let e ← reader_task.map (fun t => do
       match t with
       | .ok none =>
@@ -72,7 +69,7 @@ def process_client (socket : Internal.UV.TCP.Socket) : GenSeqT IO UInt32 := do
       | .ok (some u) =>
         match String.fromUTF8? u with
         | some text =>
-          IO.println s!"got data: {text}"
+          IO.println s!"got data: {text.trimRight}"
           let output ← process_data text
           match (← socket.send <| String.toUTF8 output).result!.get with
           | .ok _ => return none
