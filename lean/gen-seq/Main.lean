@@ -5,15 +5,16 @@ import GenSeq
 open Lean Elab Term Cli Synth
 open Std Net
 
-structure GenSeqState where
+structure GenSeqContext where
   env : Environment
   ctx : Core.Context
   state : Core.State
 
-abbrev GenSeqT := ReaderT GenSeqState
+abbrev GenSeqState a := ReaderT GenSeqContext IO a
+abbrev GenSeqExcept m := ExceptT String GenSeqState m
 
-def GenSeqT.run {m : Type → Type} {α : Type} (x : GenSeqT m α)
-    (env : Environment) (ctx : Core.Context) (state : Core.State) : m α :=
+def GenSeqState.run {α : Type} (x : GenSeqState α)
+    (env : Environment) (ctx : Core.Context) (state : Core.State) : IO α :=
   ReaderT.run x ⟨env, ctx, state⟩
 
 instance : ToString SocketAddress where
@@ -21,42 +22,58 @@ instance : ToString SocketAddress where
   | .v4 ⟨a, p⟩ => s!"{a}:{p}"
   | .v6 ⟨a, p⟩ => s!"{a}:{p}"
 
-def runExcept {e a : Type} {m : Type → Type} [Monad m] (x : Except e (m (Except e a))) :
-    m (Except e a) := do
-  match x with
-  | .error err => pure (Except.error err)
-  | .ok result => pure (← result)
-
-def toLean (name source : String) (offst : Nat) : GenSeqT IO (Except String String) := do
+def toLean (name source : String) (offst : Nat) : GenSeqExcept String := do
   let state ← read
-  Prod.fst <$> (Meta.MetaM.toIO · state.ctx state.state) do
+  ExceptT.mk <| Prod.fst <$> (Meta.MetaM.toIO · state.ctx state.state) do
     TermElabM.run' (DSLToLean name source offst)
 
-def process_json (obj : Json) : GenSeqT IO (Except String Json) := do
-  return ← runExcept do
-    let name ← obj.getObjValAs? String "name" |>.mapError (s!"missing name: {·}")
-    let offst ← obj.getObjValAs? Nat "offset" |>.mapError (s!"missing offset: {·}")
-    let source ← obj.getObjValAs? String "source" |>.mapError (s!"missing source: {·}")
-    return toLean name source offst >>= (fun o =>
-      pure <| o.map (fun v =>
-        Json.mkObj [
-          ("status", Json.bool true),
-          ("lean", v),
-          ("error", Json.null)
-        ]))
+def gen (obj : Json) : GenSeqExcept Json := do
+  let name ← obj.getObjValAs? String "name" |>.mapError (s!"missing name: {·}")
+  let offst ← obj.getObjValAs? Nat "offset" |>.mapError (s!"missing offset: {·}")
+  let source ← obj.getObjValAs? String "source" |>.mapError (s!"missing source: {·}")
+  let z ← toLean name source offst
+  return Json.mkObj [
+    ("lean", z)
+  ]
 
-def process_data (input : String) : GenSeqT IO String := do
-  let x ← runExcept <| Lean.Json.parse input >>= (fun r => pure <| process_json r)
-  let y := match x with
-  | .ok s => s
-  | .error s =>
-    Json.mkObj [
-      ("status", Json.bool false),
-      ("error", s)
-    ]
-  return s!"{y.compress}\n"
+def eval (obj : Json) : GenSeqExcept Json := do
+  let x ← obj.getObjValAs? Int "x" |>.mapError (s!"missing x: {·}")
+  let y ← obj.getObjValAs? Int "y" |>.mapError (s!"missing y: {·}")
+  return Json.mkObj [
+    ("x + y", x + y)
+  ]
 
-def process_client (socket : Internal.UV.TCP.Socket) : GenSeqT IO UInt32 := do
+def Commands : Std.HashMap String (Json → GenSeqExcept Json) := .ofList [
+  ("gen", gen),
+  ("sum", eval)
+]
+
+def errorToJson (e : String) : Json := Json.mkObj [("status", false), ("error", e), ("version", 2)]
+
+def okToJson (r : Json) : Json := Json.mkObj [
+  ("status", true),
+  ("result", r),
+  ("error", Json.null)
+]
+
+def process_json (obj : Json) : GenSeqExcept Json := do
+  let command ← obj.getObjValAs? String "cmd" |>.mapError (s!"missing cmd: {·}")
+  let some commandFun := Commands.get? command |
+    ExceptT.mk <| pure (Except.error s!"wrong command: {command}")
+  let args ← obj.getObjValAs? Json "args" |>.mapError (s!"missing args: {·}")
+  commandFun args
+
+def process_data (input : String) : GenSeqState String := do
+  let z := Json.parse input |>.map (process_json ·)
+  let w ← match z with
+  | .ok j => ExceptT.run j
+  | .error e => pure <| .error e
+  let u ← match w with
+  | .ok s => pure <| okToJson s
+  | .error e => pure <| errorToJson e
+  return s!"{u.compress}\n"
+
+def process_client (socket : Internal.UV.TCP.Socket) : GenSeqState UInt32 := do
   while true do
     let reader_task := (← socket.recv? 65536).result!
     let e ← reader_task.map (fun t => do
@@ -85,7 +102,7 @@ def process_client (socket : Internal.UV.TCP.Socket) : GenSeqT IO UInt32 := do
       return x
   return 0
 
-def run_server (port : Nat) : GenSeqT IO UInt32 := do
+def run_server (port : Nat) : GenSeqState UInt32 := do
   let socket ← Internal.UV.TCP.Socket.new
   let addr := IPv4Addr.ofString "0.0.0.0" |>.getD default
   let endpoint := SocketAddress.v4 {addr := addr, port := port}
@@ -101,7 +118,7 @@ def run_server (port : Nat) : GenSeqT IO UInt32 := do
         IO.println s!"client connected: {← s.getPeerName}"
         let state ← read
         let _u ← IO.asTask (
-          GenSeqT.run (process_client s) state.env state.ctx state.state
+          GenSeqState.run (process_client s) state.env state.ctx state.state
         )
       | .error e =>
         IO.println s!"client connection error: {e}"
@@ -117,18 +134,18 @@ def run (p : Parsed) : IO UInt32 := do
   let ctx : Core.Context := {fileName := "", fileMap := default}
   let state : Core.State := {env}
   let port := p.flag? "port" |>.map (·.as! Nat) |>.getD 8000
-  GenSeqT.run (run_server port) env ctx state
+  GenSeqState.run (run_server port) env ctx state
 
 unsafe
 def cmd : Cmd := `[Cli|
   "genseq" VIA run; ["0.1.0"]
-  r#"Generate a Lean definition from the synthetic DSL.
+  "Generate a Lean definition from the synthetic DSL.
 
-  Requests: {"name": String, "offset": Nat, "source": String}
+  Requests: {\"name\": String, \"offset\": Nat, \"source\": String}
   Responses:
-    - {"status": true, "lean": String}
-    - {"status": false, "error": String}
-  "#
+    - {\"status\": true, \"lean\": String}
+    - {\"status\": false, \"error\": String}
+  "
 
   FLAGS:
     p, port : Nat;      "Listen at port <port> (default: 8000)"
