@@ -48,7 +48,7 @@ def Commands : Std.HashMap String (Json → GenSeqExcept Json) := .ofList [
   ("sum", eval)
 ]
 
-def errorToJson (e : String) : Json := Json.mkObj [("status", false), ("error", e), ("version", 2)]
+def errorToJson (e : String) : Json := Json.mkObj [("status", false), ("error", e)]
 
 def okToJson (r : Json) : Json := Json.mkObj [
   ("status", true),
