@@ -36,16 +36,24 @@ def gen (obj : Json) : GenSeqExcept Json := do
     ("lean", z)
   ]
 
-def eval (obj : Json) : GenSeqExcept Json := do
+def sum (obj : Json) : GenSeqExcept Json := do
   let x ← obj.getObjValAs? Int "x" |>.mapError (s!"missing x: {·}")
   let y ← obj.getObjValAs? Int "y" |>.mapError (s!"missing y: {·}")
   return Json.mkObj [
     ("x + y", x + y)
   ]
 
+def eval (..)
+   get "def Af8"
+    String -> Expr (grammar.lean)
+   get values [(1, 32423)]
+   evaluate def for every idx, value
+    Expr -> ℤ (sequencelib/Meta/DeriveTheorems.lean)
+   check
+
 def Commands : Std.HashMap String (Json → GenSeqExcept Json) := .ofList [
   ("gen", gen),
-  ("sum", eval)
+  ("sum", sum)
 ]
 
 def errorToJson (e : String) : Json := Json.mkObj [("status", false), ("error", e)]
