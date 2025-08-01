@@ -43,13 +43,13 @@ def sum (obj : Json) : GenSeqExcept Json := do
     ("x + y", x + y)
   ]
 
-def eval (..)
-   get "def Af8"
-    String -> Expr (grammar.lean)
-   get values [(1, 32423)]
-   evaluate def for every idx, value
-    Expr -> ℤ (sequencelib/Meta/DeriveTheorems.lean)
-   check
+-- def eval (..)
+--    get "def Af8"
+--     String -> Expr (grammar.lean)
+--    get values [(1, 32423)]
+--    evaluate def for every idx, value
+--     Expr -> ℤ (sequencelib/Meta/DeriveTheorems.lean)
+--    check
 
 def Commands : Std.HashMap String (Json → GenSeqExcept Json) := .ofList [
   ("gen", gen),
