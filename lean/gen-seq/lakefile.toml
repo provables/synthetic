@@ -21,5 +21,6 @@ rev = "v4.20.0"
 name = "GenSeq"
 
 [[lean_exe]]
+supportInterpreter = true
 name = "genseq"
 root = "Main"
