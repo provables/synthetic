@@ -86,9 +86,7 @@ def eval (obj : Json) : GenSeqExcept Json := do
   let result ← checkFunction src values
   dbg_trace s!"Got result {result}"
   return Json.mkObj [
-    ("src", src),
-    ("values", values.toJson),
-    ("result", result)
+    ("eval", result)
   ]
 
 def Commands : Std.HashMap String (Json → GenSeqExcept Json) := .ofList [
