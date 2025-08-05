@@ -71,6 +71,11 @@ def process_json (obj : Json) : GenSeqExcept Json := do
   let args ← obj.getObjValAs? Json "args" |>.mapError (s!"missing args: {·}")
   commandFun args
 
+#check Lean.ofExcept
+run_cmd do
+  let x ←
+  IO.println ""
+
 def process_data (input : String) : GenSeqState String := do
   let z := Json.parse input |>.map (process_json ·)
   let w ← match z with

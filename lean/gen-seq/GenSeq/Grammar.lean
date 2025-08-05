@@ -97,6 +97,19 @@ def parse (s : String) : Elab.TermElabM (Except String T) := do
       | `(oeis_synth| $k) => k
   )
 
+open Command
+run_cmd do
+  let s := "def foo := 2"
+  let env ← getEnv
+  let u := Lean.Parser.runParserCategory env `command "def f := 5"
+  let x ←  match u with
+  | .error s => dbg_trace s!"error {s}"; return "err"
+  | .ok s =>
+    dbg_trace (s)
+    elabCommand s
+    return ""
+#eval f
+
 mutual
 partial def binOp (indent : ℕ) (t1 t2 : T) (op : String) : String :=
   let s1 := TtoLeanAux indent t1
