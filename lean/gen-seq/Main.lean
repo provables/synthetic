@@ -49,7 +49,7 @@ def sum (obj : Json) : GenSeqExcept Json := do
     ("x + y", x + y)
   ]
 
-def cmdStringToExpr (s : String) (values : Array (Int × Int)) :
+def checkFunctionM (s : String) (values : Array (Int × Int)) :
     Command.CommandElabM (Except String Bool) := withoutModifyingEnv do
   let env ← getEnv
   let stx ← match Lean.Parser.runParserCategory env `command s with
@@ -69,21 +69,21 @@ def cmdStringToExpr (s : String) (values : Array (Int × Int)) :
         return false
     return true
 
-def cmdStringToLean (s : String) (values : Array (Int × Int)): GenSeqExcept Bool := do
+def checkFunction (s : String) (values : Array (Int × Int)): GenSeqExcept Bool := do
   let state ← read
   ExceptT.mk <| Prod.fst <$> (Core.CoreM.toIO · state.ctx state.state) do
-    liftCommandElabM (cmdStringToExpr s values)
+    liftCommandElabM (checkFunctionM s values)
 
 -- run_cmd do
 --   let env ← getEnv
---   let x := ExceptT.run <| cmdStringToLean r#"def huu (n : Nat) : Int := n"# #[(1,1), (2,4)]
+--   let x := ExceptT.run <| checkFunction r#"def huu (n : Nat) : Int := n"# #[(1,1), (2,4)]
 --   let z ← GenSeqState.run x env {fileName := "", fileMap := default} {env}
 --   dbg_trace z
 
 def eval (obj : Json) : GenSeqExcept Json := do
   let src ← obj.getObjValAs? String "src" |>.mapError (s!"missing src: {·}")
   let values ← obj.getObjValAs? (Array (Int × Int)) "values" |>.mapError (s!"missing values: {·}")
-  let result ← cmdStringToLean src values
+  let result ← checkFunction src values
   dbg_trace s!"Got result {result}"
   return Json.mkObj [
     ("src", src),
