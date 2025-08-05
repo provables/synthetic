@@ -4,6 +4,7 @@ import GenSeq
 
 open Lean Elab Term Cli Synth
 open Std Net
+open Qq
 
 structure GenSeqContext where
   env : Environment
@@ -36,6 +37,11 @@ def gen (obj : Json) : GenSeqExcept Json := do
     ("lean", z)
   ]
 
+def ready (_obj : Json) : GenSeqExcept Json := do
+  return Json.mkObj [
+    ("status", "ready")
+  ]
+
 def sum (obj : Json) : GenSeqExcept Json := do
   let x ← obj.getObjValAs? Int "x" |>.mapError (s!"missing x: {·}")
   let y ← obj.getObjValAs? Int "y" |>.mapError (s!"missing y: {·}")
@@ -50,10 +56,74 @@ def sum (obj : Json) : GenSeqExcept Json := do
 --    evaluate def for every idx, value
 --     Expr -> ℤ (sequencelib/Meta/DeriveTheorems.lean)
 --    check
+def termStringToExpr (s : String) : TermElabM Lean.Expr := do
+  let env ← Lean.getEnv
+  let stx ← Lean.ofExcept (Lean.Parser.runParserCategory env `term s)
+  Lean.Elab.Term.elabTerm stx none -- `none` for expected type if not known
+
+#check Command.CommandElab
+def cmdStringToExpr (s : String) : Command.CommandElabM Unit := do
+  let env ← Lean.getEnv
+  let stx ← Lean.ofExcept (Lean.Parser.runParserCategory env `command s)
+  Lean.Elab.Command.elabCommand stx
+
+run_cmd do
+  let x ← cmdStringToExpr r#"def h (n : ℕ ) : ℤ := n"#
+  dbg_trace (h 1)
+
+def cmdStringToLean (s : String) : GenSeqExcept Unit := do
+  let state ← read
+  Prod.fst <$> (Meta.MetaM.toIO · state.ctx state.state) do
+    liftCommandElabM (cmdStringToExpr s)
+
+def evalSyntax (values: Array (Int × Int)) (decl: Name) : TermElabM Bool := do
+  for (idx, val) in values do
+    let value ← instantiateMVars (
+      ← Term.elabTerm (← `(term|$(mkIdent decl):ident $(quote idx))) (some (mkConst `Int [])))
+    Term.synthesizeSyntheticMVarsNoPostponing
+    let z ← unsafe Meta.evalExpr Int (mkConst `Int []) value
+    if z != val then
+      return false
+  return true
+
+def h (n : ℕ) : ℤ := n
+
+run_elab do
+  let b ← evalSyntax #[ (1, 1), (2, 2) ] `h
+  dbg_trace b
+
+def eval (obj : Json) : GenSeqExcept Json := do
+  let src ← obj.getObjValAs? String "src" |>.mapError (s!"missing src: {·}")
+  cmdStringToLean src
+  let name ← obj.getObjValAs? String "name" |>.mapError (s!"missing name: {·}")
+  let decl := Name.mkSimple name
+  dbg_trace s!"got decl {decl}"
+  let values ← obj.getObjValAs? (Array (Int × Int)) "values" |>.mapError (s!"missing values: {·}")
+
+  dbg_trace s!"got values {values}"
+  let state ← read
+  let result ←  Prod.fst <$> (Meta.MetaM.toIO · state.ctx state.state) do
+    TermElabM.run' (evalSyntax values decl)
+  dbg_trace s!"Got result {result}"
+  return Json.mkObj [
+    ("src", src),
+    ("values", values.toJson),
+    ("result", result)
+  ]
+
+run_elab do
+  let x ← termStringToExpr "1 + 1"
+  IO.println s! "{x}"
+
+run_meta do
+  let j ← Lean.ofExcept (Json.parse r#"{"cmd": "eval", "args": {"src": "def h (n : ℕ ) : ℕ := n", "values": [[1,2], [2, 6]] } }"#)
+  let x := GenSeqState.run (ExceptT.run (eval j))
 
 def Commands : Std.HashMap String (Json → GenSeqExcept Json) := .ofList [
+  ("ready", ready),
   ("gen", gen),
-  ("sum", sum)
+  ("sum", sum),
+  ("eval", eval)
 ]
 
 def errorToJson (e : String) : Json := Json.mkObj [("status", false), ("error", e)]
