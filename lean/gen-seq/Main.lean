@@ -49,6 +49,16 @@ def sum (obj : Json) : GenSeqExcept Json := do
     ("x + y", x + y)
   ]
 
+def checkValuesFor (decl : Name) (values : Array (Int × Int)) : TermElabM Bool := do
+  for (idx, val) in values do
+    let e ← instantiateMVars (← Term.elabTerm (← `(term|$(mkIdent decl):ident $(quote idx)))
+      (some q(Int)))
+    Term.synthesizeSyntheticMVarsNoPostponing
+    let z ← unsafe Meta.evalExpr Int q(Int) e
+    if z ≠ val then
+      return false
+  return true
+
 def checkFunctionM (s : String) (values : Array (Int × Int)) :
     Command.CommandElabM (Except String Bool) := withoutModifyingEnv do
   let env ← getEnv
@@ -59,15 +69,7 @@ def checkFunctionM (s : String) (values : Array (Int × Int)) :
     return .error "not a definition"
   let name := stx[1][1][0].getId
   elabCommand stx
-  return .ok <| ← Command.liftTermElabM do
-    for (idx, val) in values do
-      let e ← instantiateMVars (← Term.elabTerm (← `(term|$(mkIdent name):ident $(quote idx)))
-        (some q(Int)))
-      Term.synthesizeSyntheticMVarsNoPostponing
-      let z ← unsafe Meta.evalExpr Int q(Int) e
-      if z ≠ val then
-        return false
-    return true
+  return .ok <| ← Command.liftTermElabM (checkValuesFor name values)
 
 def checkFunction (s : String) (values : Array (Int × Int)): GenSeqExcept Bool := do
   let state ← read
