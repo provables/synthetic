@@ -68,6 +68,8 @@ def checkFunctionM (s : String) (values : Array (Int × Int)) :
   if !stx.isOfKind `Lean.Parser.Command.declaration then
     return .error "not a definition"
   let name := stx[1][1][0].getId
+  let cmd ← `(command|open Synth)
+  elabCommand cmd
   elabCommand stx
   return .ok <| ← Command.liftTermElabM (checkValuesFor name values)
 
