@@ -50,11 +50,18 @@ def sum (obj : Json) : GenSeqExcept Json := do
   ]
 
 def checkValuesFor (decl : Name) (values : Array (Int × Int)) : TermElabM Bool := do
+  let env ← getEnv
   for (idx, val) in values do
     let e ← instantiateMVars (← Term.elabTerm (← `(term|$(mkIdent decl):ident $(quote idx)))
       (some q(Int)))
+    let ex := env.find? decl |>.map (·.type) |>.getD default
+    let some t := (match ex with
+    | .forallE _ (.const ``Nat _) (.const ``Nat _) _ => some Nat
+    | .forallE _ (.const ``Nat _) (.const ``Int _) _ => some Int
+    | _ => none) | return false
     Term.synthesizeSyntheticMVarsNoPostponing
-    let z ← unsafe Meta.evalExpr Int q(Int) e
+    let z ← unsafe Meta.evalExpr t (Lean.mkConst `t []) e
+    let zc := by
     if z ≠ val then
       return false
   return true
