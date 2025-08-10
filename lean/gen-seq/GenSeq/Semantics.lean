@@ -21,12 +21,49 @@ def mod (a : ℤ) (b : ℤ) : ℤ := a % b
 @[simp]
 def cond (a b c : ℤ) : ℤ := if a ≤ 0 then b else c
 
+/--
+Original semantics from the paper. It uses recursion and it's inefficient.
+Use `loop` instead (see theorem about equivalence).
+-/
+@[simp,reducible]
+def loop' (f : ℤ → ℤ → ℤ) (a : ℤ) (b : ℤ) : ℤ :=
+  match a with
+  | .ofNat 0 => b
+  | .ofNat (n + 1) => f (loop' f n b) (n + 1)
+  | .negSucc _ => b
+termination_by Int.natAbs a
+
+/--
+Efficient implementation of `loop`.
+-/
 @[simp,reducible]
 def loop (f : ℤ → ℤ → ℤ) (n : ℤ) (b : ℤ) : ℤ :=
   match n with
   | .ofNat m => List.range' 1 m |>.foldl f b
   | .negSucc _ => b
-termination_by Int.natAbs a
+
+theorem loop'_eq_loop (f : ℤ → ℤ → ℤ) (n : ℤ) (b : ℤ) : loop' f n b = loop f n b := by
+  simp only [loop]
+  cases n with
+  | ofNat m =>
+    induction m with
+    | zero =>
+      reduce; rfl
+    | succ k ih =>
+      rw [loop']
+      push_cast
+      conv at ih =>
+        rhs
+        reduce
+      rw [show Int.ofNat k = ↑k by rfl] at ih
+      rw [ih]
+      simp
+      have : List.range' 1 (k + 1) = List.range' 1 k ++ [k + 1] := by
+        nth_rw 2 [show k + 1 = 1 + k by omega]
+        apply List.range'_1_concat
+      aesop
+  | negSucc m =>
+    reduce; rfl
 
 @[simp,reducible]
 def loop2 (f g : ℤ → ℤ → ℤ) (a : ℤ) (b c : ℤ) : ℤ :=
