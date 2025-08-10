@@ -22,10 +22,9 @@ def mod (a : ℤ) (b : ℤ) : ℤ := a % b
 def cond (a b c : ℤ) : ℤ := if a ≤ 0 then b else c
 
 @[simp,reducible]
-def loop (f : ℤ → ℤ → ℤ) (a : ℤ) (b : ℤ) : ℤ :=
-  match a with
-  | .ofNat 0 => b
-  | .ofNat (n + 1) => f (loop f n b) (n + 1)
+def loop (f : ℤ → ℤ → ℤ) (n : ℤ) (b : ℤ) : ℤ :=
+  match n with
+  | .ofNat m => List.range' 1 m |>.foldl f b
   | .negSucc _ => b
 termination_by Int.natAbs a
 
