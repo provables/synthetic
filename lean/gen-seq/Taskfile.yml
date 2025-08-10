@@ -45,6 +45,13 @@ tasks:
     deps:
       - build
       - compile
+  
+  supervise: 
+    desc: Run genseq server in supervised mode. 
+    cmds: 
+      - 'supervisord -c supervisord.conf'
+    status:
+      - supervisorctl status | grep RUNNING    
 
   get-cache-for-dir:
     internal: true

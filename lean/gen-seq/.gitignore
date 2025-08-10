@@ -8,3 +8,5 @@ home_page/blueprint/
 home_page/blueprint.pdf
 home_page/_site/
 .task/
+supervisord.log 
+supervisord.pid

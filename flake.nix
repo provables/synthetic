@@ -30,6 +30,7 @@
             tomlkit
             jinja2
             gitpython
+            supervisor
         ];
 
         pythonImportsCheck = [ "leanblueprint" ];
