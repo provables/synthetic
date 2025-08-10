@@ -42,7 +42,8 @@ def loop (f : ℤ → ℤ → ℤ) (n : ℤ) (b : ℤ) : ℤ :=
   | .ofNat m => List.range' 1 m |>.foldl f b
   | .negSucc _ => b
 
-theorem loop'_eq_loop (f : ℤ → ℤ → ℤ) (n : ℤ) (b : ℤ) : loop' f n b = loop f n b := by
+theorem loop'_eq_loop : loop' = loop := by
+  ext h n b
   simp only [loop]
   cases n with
   | ofNat m =>
