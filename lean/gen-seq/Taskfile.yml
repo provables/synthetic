@@ -47,11 +47,20 @@ tasks:
       - compile
   
   supervise: 
-    desc: Run genseq server in supervised mode. 
+    desc: Run genseq server in supervised mode (use `stop-supervise` for cleanly stopping it)
     cmds: 
       - 'supervisord -c supervisord.conf'
     status:
       - supervisorctl status | grep RUNNING    
+
+  stop-supervise:
+    desc: Stop genseq and its supervisor
+    cmds:
+      - supervisorctl stop all
+      - supervisorctl shutdown
+      - lsof -i:8000 -t | xargs -r kill -9
+    status:
+      - "! $(supervisorctl status > /dev/null)"
 
   get-cache-for-dir:
     internal: true
