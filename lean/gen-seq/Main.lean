@@ -126,17 +126,26 @@ def process_data (input : String) : GenSeqState String := do
   return s!"{u.compress}\n"
 
 def process_client (socket : Internal.UV.TCP.Socket) : GenSeqState UInt32 := do
+  let mut data : String := default
   while true do
-    let reader_task := (← socket.recv? 65536).result!
+    let reader_task := (← socket.recv? 65536000).result!
     let e ← reader_task.map (fun t => do
       match t with
       | .ok none =>
         IO.println s!"client disconnected: {← socket.getPeerName}"
         return (some 0)
       | .ok (some u) =>
+        let s := u.size
+        IO.println s!"length of data: {s}"
         match String.fromUTF8? u with
         | some text =>
           IO.println s!"got data: {text.trimRight}"
+          --if data has new line:
+          --    collect data up to new line, and save the rest for the next iteration
+          --    call process_data
+          --else
+          --    append new data to old data
+          --    return none to drive the next iteration
           let output ← process_data text
           match (← socket.send <| String.toUTF8 output).result!.get with
           | .ok _ => return none
