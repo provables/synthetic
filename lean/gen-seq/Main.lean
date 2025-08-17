@@ -126,39 +126,38 @@ def process_data (input : String) : GenSeqState String := do
   return s!"{u.compress}\n"
 
 def process_client (socket : Internal.UV.TCP.Socket) : GenSeqState UInt32 := do
-  let mut data : String := default
+  let mut data : ByteArray := default
   while true do
     let reader_task := (← socket.recv? 65536000).result!
-    let e ← reader_task.map (fun t => do
+    let (e, remaining) ← reader_task.map (fun t => do
       match t with
       | .ok none =>
         IO.println s!"client disconnected: {← socket.getPeerName}"
-        return (some 0)
+        return (some 0, default)
       | .ok (some u) =>
-        let s := u.size
-        IO.println s!"length of data: {s}"
-        match String.fromUTF8? u with
-        | some text =>
-          IO.println s!"got data: {text.trimRight}"
-          --if data has new line:
-          --    collect data up to new line, and save the rest for the next iteration
-          --    call process_data
-          --else
-          --    append new data to old data
-          --    return none to drive the next iteration
-          let output ← process_data text
-          match (← socket.send <| String.toUTF8 output).result!.get with
-          | .ok _ => return none
-          | .error e =>
-            IO.println s!"got error while writing: {e}"
-            return (some 1)
-        | none =>
-          IO.println "got data but not utf8"
-          return (some 1)
+        if let some i := u.findFinIdx? (· == 10) then
+          let data_received := data.append <| u.extract 0 (i + 1)
+          let remaining := u.extract (i + 1) u.size
+          match String.fromUTF8? data_received with
+          | some text =>
+            IO.println s!"got data: {text.trimRight}"
+            let output ← process_data text
+            match (← socket.send <| String.toUTF8 output).result!.get with
+            | .ok _ => return (none, remaining)
+            | .error e =>
+              IO.println s!"got error while writing: {e}"
+              return (some 1, default)
+          | none =>
+            IO.println "got data but not utf8"
+            return (some 1, default)
+        else
+          -- more data to read, keep looping
+          return (none, data.append u)
       | .error v =>
         IO.println s!"got error while reading: {v}"
-        return (some 1)
+        return (some 1, default)
     ) |>.get
+    data := remaining
     if let some x := e then
       return x
   return 0
