@@ -19,7 +19,7 @@
                 "4.20.1" = "sha256-5usI8QrBf4oH9LmYp+7A+SPEQmqnCZdHXhHQncJ3Vfo=";
               };
               aarch64-linux = {
-                "4.20.1" = "";
+                "4.20.1" = "sha256-G24XlAh5wLS81WllDEclEJ2+oKVNIKryj16uFCiontk=";
               };
               x86_64-darwin = {
                 "4.20.1" = "";
