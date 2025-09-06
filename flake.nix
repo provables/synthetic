@@ -21,6 +21,12 @@
               aarch64-linux = {
                 "4.20.1" = "";
               };
+              x86_64-darwin = {
+                "4.20.1" = "";
+              };
+              x86_64-linux = {
+                "4.20.1" = "";
+              };
             };
           in
           pkgs.stdenv.mkDerivation {
