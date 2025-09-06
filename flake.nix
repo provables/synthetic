@@ -79,8 +79,8 @@
           '';
         };
 
-        genseq = pkgs.stdenv.mkDerivation {
-          name = "genseq";
+        genseqBin = pkgs.stdenv.mkDerivation {
+          name = "genseqBin";
           nativeBuildInputs = [ pkgs.makeWrapper ];
           buildInputs = with pkgs; [
             lean-toolchain
@@ -103,18 +103,29 @@
             ln -s ${syntheticPackagesLn}/.lake/packages .lake/packages
             ${lean-toolchain}/bin/lake build genseq
             rsync -a .lake/build/lib/lean $out/lib/
-            LEAN_PATH=$(
-              echo -n "$out/lib/lean"
-              for f in $(ls ${syntheticPackagesLn}/.lake/packages/); do
-                echo -n ":${syntheticPackagesLn}/.lake/packages/$f/.lake/build/lib/lean";
-              done
-            )
             cp .lake/build/bin/genseq $out/bin/genseq
             wrapProgram $out/bin/genseq \
-              --set LEAN_PATH "$LEAN_PATH" \
               --set PATH "$PATH"
           '';
         };
+      genseq = pkgs.stdenv.mkDerivation {
+        name = "genseq";
+        nativeBuildInputs = [ pkgs.makeWrapper ];
+        src = ./.;
+        phases = [
+          "buildPhase"
+        ];
+        buildPhase = ''
+          mkdir -p $out/bin
+          LEAN_PATH=$(
+            echo -n "${genseqBin}/lib/lean"
+            for f in $(ls ${syntheticPackagesLn}/.lake/packages/); do
+              echo -n ":${syntheticPackagesLn}/.lake/packages/$f/.lake/build/lib/lean";
+            done
+          )
+          makeWrapper ${genseqBin}/bin/genseq $out/bin/genseq --set LEAN_PATH "$LEAN_PATH"
+        '';
+      };
       in
       {
         packages.default = genseq;
