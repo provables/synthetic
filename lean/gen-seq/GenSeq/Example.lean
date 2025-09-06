@@ -1,4 +1,3 @@
-import Mathlib
 import GenSeq
 
 open Synth

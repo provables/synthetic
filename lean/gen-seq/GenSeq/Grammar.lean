@@ -1,4 +1,4 @@
-import Mathlib
+import Mathlib.Data.Nat.Notation
 import Lean.Syntax
 import Qq
 

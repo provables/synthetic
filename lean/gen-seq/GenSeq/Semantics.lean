@@ -1,4 +1,7 @@
-import Mathlib
+import Mathlib.Algebra.Ring.Int.Defs
+import Mathlib.Testing.Plausible.Sampleable
+import Mathlib.Data.Int.Basic
+import Mathlib.Tactic
 
 namespace Synth
 open Function

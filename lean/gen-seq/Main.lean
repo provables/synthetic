@@ -1,6 +1,6 @@
-import Lean
-import Cli
+import Cli.Basic
 import GenSeq
+import Std.Internal.UV.TCP
 
 open Lean Elab Term Cli Synth Command
 open Std Net
