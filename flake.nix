@@ -111,7 +111,8 @@
             )
             cp .lake/build/bin/genseq $out/bin/genseq
             wrapProgram $out/bin/genseq \
-              --set LEAN_PATH "$LEAN_PATH" 
+              --set LEAN_PATH "$LEAN_PATH" \
+              --set PATH "$PATH"
           '';
         };
       in
