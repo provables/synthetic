@@ -2,3 +2,5 @@
 result
 .lake/
 .task/
+supervisord.log
+supervisord.pid
