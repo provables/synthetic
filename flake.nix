@@ -108,24 +108,25 @@
               --set PATH "$PATH"
           '';
         };
-      genseq = pkgs.stdenv.mkDerivation {
-        name = "genseq";
-        nativeBuildInputs = [ pkgs.makeWrapper ];
-        src = ./.;
-        phases = [
-          "buildPhase"
-        ];
-        buildPhase = ''
-          mkdir -p $out/bin
-          LEAN_PATH=$(
-            echo -n "${genseqBin}/lib/lean"
-            for f in $(ls ${syntheticPackagesLn}/.lake/packages/); do
-              echo -n ":${syntheticPackagesLn}/.lake/packages/$f/.lake/build/lib/lean";
-            done
-          )
-          makeWrapper ${genseqBin}/bin/genseq $out/bin/genseq --set LEAN_PATH "$LEAN_PATH"
-        '';
-      };
+        genseq = pkgs.stdenv.mkDerivation {
+          name = "genseq";
+          nativeBuildInputs = [ pkgs.makeWrapper ];
+          src = ./.;
+          phases = [
+            "buildPhase"
+          ];
+          buildPhase = ''
+            mkdir -p $out/bin
+            LEAN_PATH=$(
+              echo -n "${genseqBin}/lib/lean"
+              for f in $(ls ${syntheticPackagesLn}/.lake/packages/); do
+                echo -n ":${syntheticPackagesLn}/.lake/packages/$f/.lake/build/lib/lean";
+              done
+            )
+            makeWrapper ${genseqBin}/bin/genseq $out/bin/genseq --set LEAN_PATH "$LEAN_PATH"
+          '';
+        };
+        python = pkgs.python313.withPackages (ps: [ ps.supervisor ]);
       in
       {
         packages.default = genseq;
@@ -138,6 +139,9 @@
             lean-toolchain
             elan
             go-task
+            python
+            findutils
+            lsof
           ] ++ lib.optional stdenv.isDarwin apple-sdk_14;
         };
       }
