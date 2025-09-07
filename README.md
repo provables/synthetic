@@ -12,7 +12,26 @@ Run `task -a` to see all the tasks available. The common ones are:
 * `task run -- -p 1234`: same as before but on port 1234.
 * `task run -- -h`: display help.
 
-### Request format
+## Deploying and Composing
+
+For building an executable, run `nix build`.  Copy the Nix closure of the result to obtain a
+self-contained executable.
+
+For composing this tool into another flake, add this flake as an input and grab the `genseq`
+derivation as:
+```nix
+{
+  inputs = {
+    ...
+    synthetic.url = "github:provables/synthetic";
+  }
+  outputs = { ..., synthetic }: {
+    genseq = synthetic.packages.${system}.default;
+    ...
+  }
+```
+
+## Request format
 
 Write a JSON string terminated with `\n`, with the following format:
 ```json
