@@ -1,55 +1,70 @@
-# GenSeq Server
+# Gen Seq
 
-A "Lean Server" for transpiling and evaluating OEIS sequences.
+Run a server that converts the synthetic DSL to a Lean definition.
 
-## Using
+## Usage
 
-The easiest way to run this server is using [Nix](https://nixos.org).
+Start a development environment with `nix develop`.
 
-Clone the repository and run `nix develop` in the directory.
+Run `task -a` to see all the tasks available. The common ones are:
 
-Once in the environment, run `task -a` to list all the tasks available. In particular, 
-`task supervise` will start the Lean server under the control of a supervisor (so if it crashes
-it will be restarted automatically). Alternatively, you can use `lake exe genseq` for running
-the server manually.
+* `task run`: build, compile into an executable, and run the server on default port 8000.
+* `task run -- -p 1234`: same as before but on port 1234.
+* `task run -- -h`: display help.
 
-Access the server at `localhost:8000`. For example:
+### Request format
 
-```bash
-⌘ ➜ echo '{"cmd": "ready"}' | nc localhost 8000 | jq
-{
-  "status": true,
-  "result": {
-    "status": "ready"
-  },
-  "error": null
-}
-```
-
-Stop the supervisor with `task stop-supervise`.
-
-## Extending
-
-You can add new commands to the server by writing a function with signature:
-
-```lean
-Json -> GenSeqExcept Json
-```
-
-in the file `GenSeq/Main.lean`, and adding the corresponding entry to the hashmap `Commands`.
-
-The function will receive the the arguments of the command. For example, if the server receives
-the command:
-
+Write a JSON string terminated with `\n`, with the following format:
 ```json
 {
-    "cmd": "eval",
+    "cmd": "gen",
     "args": {
-        "src": "...",
-        "values": [...]
+        "name": "foo",
+        "offset": 1,
+        "source": "x + 2"
     }
 }
 ```
+Other commands will be added in the future.
 
-then the function will receive the JSON object `{"src": "...", "values": [...]}`. The return object
-from the function will be the JSON object under the `"result"` key.
+### Response format
+
+The response is a JSON string with the format:
+```json
+{
+    "status": true, 
+    "result" : {
+        "lean": "def foo (n : ℕ) : ℤ :=\n  let x := n - 1\n  (x + 2)"
+    }
+}
+```
+or, in case of error:
+```json
+{
+    "status": false, 
+    "error": "error message"
+}
+```
+
+## Extending the server
+
+For adding a new command to the server, write a function with signature:
+```lean
+Json → GenSeqExcept Json
+```
+The monad `GenSeqExcept` gives access to `IO`, `Except`, and the context `GenSeqContext` that
+contains the environment with the imported module. The input is the JSON object `args`, and the
+output would be sent back as `result`.
+
+Update the HashMap `Commands` to associate a name for the command to the function.
+
+Those two changes should be enough for the server to respond to the new command.
+
+## Authors
+
+* Walter Moreira
+* Joe Stubbs
+
+## License
+
+MIT

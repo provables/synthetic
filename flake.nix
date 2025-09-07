@@ -46,7 +46,7 @@
               httpie
             ];
             src = builtins.path {
-              path = ./lean/gen-seq;
+              path = ./.;
               name = "syntheticPackages-src";
               filter = path: type: baseNameOf path != ".lake";
             };
@@ -90,7 +90,7 @@
             git
           ];
           src = builtins.path {
-            path = ./lean/gen-seq;
+            path = ./.;
             name = "genseq-src";
             filter = path: type: baseNameOf path != ".lake";
           };
