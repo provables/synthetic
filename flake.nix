@@ -5,7 +5,7 @@
     shell-utils.url = "github:waltermoreira/shell-utils";
     lean-toolchain-nix.url = "github:provables/lean-toolchain-nix";
   };
-  outputs = { nixpkgs, flake-utils, shell-utils, lean-toolchain-nix }:
+  outputs = { self, nixpkgs, flake-utils, shell-utils, lean-toolchain-nix }:
     flake-utils.lib.eachDefaultSystem (system:
       let
         pkgs = nixpkgs.legacyPackages.${system};
@@ -25,7 +25,7 @@
                 "4.20.1" = "sha256-uZ7CI5MfF+2htWxzHgl0nFxj/MsVgwtTzAP0ct4mwXk=";
               };
               x86_64-linux = {
-                "4.20.1" = "sha256-xA48B8hzaqHEhuUloeR8GLD45LUCY4tPXH5+NXfADi8=";
+                "4.20.1" = "sha256-wqM2j0B0xasDtcKKft5I6rF88K/NmzO+2nuhg4cDCS8=";
               };
             };
           in
@@ -58,7 +58,7 @@
               echo "Targets are $TGTS"
               for TGT in $TGTS; do
                 echo "Start building target $TGT..."
-                ${lean-toolchain}/bin/lake -v --log-level=trace build $TGT;
+                ${lean-toolchain}/bin/lake build $TGT;
                 echo "Finished target $TGT"
               done
               echo "Start tar process"
