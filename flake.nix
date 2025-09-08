@@ -22,7 +22,7 @@
                 "4.20.1" = "sha256-G24XlAh5wLS81WllDEclEJ2+oKVNIKryj16uFCiontk=";
               };
               x86_64-darwin = {
-                "4.20.1" = "";
+                "4.20.1" = "sha256-uZ7CI5MfF+2htWxzHgl0nFxj/MsVgwtTzAP0ct4mwXk=";
               };
               x86_64-linux = {
                 "4.20.1" = "sha256-xA48B8hzaqHEhuUloeR8GLD45LUCY4tPXH5+NXfADi8=";
