@@ -23,6 +23,7 @@ name = "GenSeq"
 [[lean_lib]]
 name = "Proofs"
 root = "Proofs"
+needs = [ "GenSeq" ]
 
 [[lean_exe]]
 supportInterpreter = true

@@ -1,5 +1,5 @@
 import Mathlib
-import Genseq.Semantics
+import GenSeq.Semantics
 
 open Synth Function
 
@@ -58,4 +58,3 @@ theorem loop2_out (f g : ℤ → ℤ → ℤ) (a : ℤ) (b c : ℤ) :
     right
     use u, v
     simp
-

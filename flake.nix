@@ -5,7 +5,7 @@
     shell-utils.url = "github:waltermoreira/shell-utils";
     lean-toolchain-nix.url = "github:provables/lean-toolchain-nix";
   };
-  outputs = { self, nixpkgs, flake-utils, shell-utils, lean-toolchain-nix }:
+  outputs = { nixpkgs, flake-utils, shell-utils, lean-toolchain-nix }:
     flake-utils.lib.eachDefaultSystem (system:
       let
         pkgs = nixpkgs.legacyPackages.${system};
