@@ -54,10 +54,14 @@
               mkdir -p $out
               export HOME=$(mktemp -d)
               ${lean-toolchain}/bin/lake exe cache get
-              TGTS=$(cat lakefile.toml | yj -tj|jq -r '(.lean_lib,.lean_exe)[].name')
+              TGTS=$(cat lakefile.toml | yj -tj | jq -r '(.lean_lib,.lean_exe)[].name')
+              echo "Targets are $TGTS"
               for TGT in $TGTS; do
-                ${lean-toolchain}/bin/lake build $TGT;
+                echo "Start building target $TGT..."
+                ${lean-toolchain}/bin/lake -v --log-level=trace build $TGT;
+                echo "Finished target $TGT"
               done
+              echo "Start tar process"
               GZIP=-n tar --sort=name \
                 --mtime="UTC 1970-01-01" \
                 --owner=0 --group=0 --numeric-owner --format=gnu \

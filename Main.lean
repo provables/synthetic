@@ -1,8 +1,9 @@
 import Cli.Basic
 import GenSeq
+import Qq
 import Std.Internal.UV.TCP
 
-open Lean Elab Term Cli Synth Command
+open Lean Elab Term Syntax Cli Synth Command
 open Std Net
 open Qq
 
@@ -51,7 +52,7 @@ def sum (obj : Json) : GenSeqExcept Json := do
 
 def checkValuesFor (decl : Name) (values : Array (Int × Int)) : TermElabM Bool := do
   for (idx, val) in values do
-    let e ← instantiateMVars (← Term.elabTerm (← `(term|$(mkIdent decl):ident $(quote idx)))
+    let e ← instantiateMVars (← Term.elabTerm (← `(term|$(mkIdent decl):ident $(quote idx.toNat)))
       (some q(Int)))
     Term.synthesizeSyntheticMVarsNoPostponing
     let z ← unsafe Meta.evalExpr Int q(Int) e
@@ -187,7 +188,7 @@ def run_server (port : Nat) : GenSeqState UInt32 := do
 
 unsafe
 def run (p : Parsed) : IO UInt32 := do
-  let modules := #[`GenSeq]
+  let modules := #[`GenSeq, `Mathlib]
   enableInitializersExecution
   initSearchPath (← findSysroot)
   let env ← importModules (modules.map ({module := ·})) {} (trustLevel := 1024) (loadExts := true)

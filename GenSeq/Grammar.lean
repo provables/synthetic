@@ -1,4 +1,3 @@
-import Mathlib.Data.Nat.Notation
 import Lean.Syntax
 import Qq
 
@@ -98,12 +97,12 @@ def parse (s : String) : Elab.TermElabM (Except String T) := do
   )
 
 mutual
-partial def binOp (indent : ℕ) (t1 t2 : T) (op : String) : String :=
+partial def binOp (indent : Nat) (t1 t2 : T) (op : String) : String :=
   let s1 := TtoLeanAux indent t1
   let s2 := TtoLeanAux indent t2
   s!"({s1} {op} {s2})"
 
-partial def TtoLeanAux (indent: ℕ) (t : T) : String :=
+partial def TtoLeanAux (indent: Nat) (t : T) : String :=
   match t with
   | .Atom x => s!"{x}"
   | .Add t1 t2 => binOp indent t1 t2 "+"
@@ -134,8 +133,8 @@ partial def TtoLeanAux (indent: ℕ) (t : T) : String :=
     s!"comprN (λ(x : ℤ) ↦ {sf}) ({s1})"
 end
 
-def TtoLean (name : String) (offst : ℕ) (t : T) : String :=
+def TtoLean (name : String) (offst : Nat) (t : T) : String :=
   s!"def {name} (n : ℕ) : ℤ :=\n  let x := n - {offst}\n  {TtoLeanAux 0 t}"
 
-def DSLToLean (name source : String) (offst : ℕ) : TermElabM (Except String String) := do
+def DSLToLean (name source : String) (offst : Nat) : TermElabM (Except String String) := do
   return (← parse source).map (TtoLean name offst ·)
