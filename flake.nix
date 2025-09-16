@@ -25,7 +25,7 @@
                 "4.20.1" = "sha256-uZ7CI5MfF+2htWxzHgl0nFxj/MsVgwtTzAP0ct4mwXk=";
               };
               x86_64-linux = {
-                "4.20.1" = "sha256-wqM2j0B0xasDtcKKft5I6rF88K/NmzO+2nuhg4cDCS8=";
+                "4.20.1" = "sha256-RjucxOZHaar92YLfU0McZhIRy5wmSJ0iZaMTJN0Ctcw=";
               };
             };
           in
