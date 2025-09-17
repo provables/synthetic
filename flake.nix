@@ -145,10 +145,10 @@
         };
       in
       {
-        packages.default = genseq;
-        packages.syntheticPackages = syntheticPackages;
-        packages.syntheticPackagesLn = syntheticPackagesLn;
-        packages.supervisedGenseq = supervisedGenseq;
+        packages = {
+          default = genseq;
+          inherit genseq supervisedGenseq;
+        };
 
         devShell = shell {
           name = "gen-seq";
@@ -159,6 +159,8 @@
             python
             findutils
             lsof
+            genseq
+            supervisedGenseq
           ] ++ lib.optional stdenv.isDarwin apple-sdk_14;
         };
       }
