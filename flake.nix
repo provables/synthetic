@@ -131,11 +131,24 @@
           '';
         };
         python = pkgs.python313.withPackages (ps: [ ps.supervisor ]);
+        supervisedGenseq = pkgs.writeShellApplication {
+          name = "supervised-genseq";
+          runtimeInputs = [ python genseq ];
+          text = ''
+            if supervisorctl status genseq >/dev/null 2>&1
+            then
+              echo "genseq already running"
+              exit 0
+            fi
+            supervisord -n -c ${./supervisord.conf}
+          '';
+        };
       in
       {
         packages.default = genseq;
         packages.syntheticPackages = syntheticPackages;
         packages.syntheticPackagesLn = syntheticPackagesLn;
+        packages.supervisedGenseq = supervisedGenseq;
 
         devShell = shell {
           name = "gen-seq";
