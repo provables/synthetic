@@ -17,8 +17,8 @@
             hashes = {
               "aarch64-darwin" = "sha256-0QMRET3AWUHwRVRD5UsoFnNfLi7I6guGfVIs2z0t/aA=";
               "aarch64-linux" = "sha256-i7mq9xycmjMdbmH3HocgehLx2xFOIA51ZFwApTd2LIw=";
-              "x86_64-darwin" = "";
-              "x86_64-linux" = "";
+              "x86_64-darwin" = "sha256-cTrmKhFCuERWN7FU2cRgsNyY7eCgafTlhmzcbhd+qLg=";
+              "x86_64-linux" = "sha256-XV2lXQIdxV1qwUb4s7DHKBVYQeWtdSCrBT0DatNxhRk=";
             };
           in
           pkgs.stdenv.mkDerivation {
