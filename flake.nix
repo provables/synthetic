@@ -79,22 +79,58 @@
         };
         python = pkgs.python313.withPackages (ps: [ ps.supervisor ]);
         supervisedGenseq = pkgs.writeShellApplication {
-          name = "supervised-genseq";
-          runtimeInputs = [ python genseq ];
+          name = "genseq";
+          runtimeInputs = [ python genseq pkgs.getopt pkgs.gnused ];
           text = ''
-            if supervisorctl status genseq >/dev/null 2>&1
-            then
-              echo "genseq already running"
+            args=$(getopt -o "vhp:s" -l "version,help,port:,supervise" -- "$@")
+            eval set -- "$args"
+            supervise=""
+            port="8000"
+            while true
+            do
+            case "$1" in
+            -h|--help)
+              ${genseq}/bin/genseq -h
               exit 0
+              ;;
+            -v|--version)
+              ${genseq}/bin/genseq --version
+              exit 0
+              ;;
+            -p|--port)
+              shift
+              port="$1"
+              ;;
+            -s|--supervise)
+              supervise="1"
+              ;;
+            --)
+              break
+              ;;
+            esac
+            shift
+            done
+            if [ -z "$supervise" ]; then
+              ${genseq}/bin/genseq -p "$port"
+            else
+              echo "Starting supervised 'genseq' on port $port" | \
+                ${pkgs.boxes}/bin/boxes -d shell -p h2v1
+              if supervisorctl status genseq >/dev/null 2>&1
+              then
+                echo "genseq already running"
+                exit 0
+              fi
+              config=$(mktemp)
+              sed "s/PORT/$port/" < ${./supervisord.conf.template} > "$config"
+              supervisord -n -c "$config"
             fi
-            supervisord -n -c ${./supervisord.conf}
           '';
         };
       in
       {
         packages = {
-          default = genseq;
-          inherit genseq supervisedGenseq;
+          default = supervisedGenseq;
+          genseq = supervisedGenseq;
         };
 
         devShell = shell {
@@ -106,7 +142,6 @@
             python
             findutils
             lsof
-            genseq
             supervisedGenseq
           ] ++ lib.optional stdenv.isDarwin apple-sdk_14;
         };
