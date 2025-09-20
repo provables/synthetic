@@ -15,10 +15,10 @@
         genseqBin =
           let
             hashes = {
-              "aarch64-darwin" = "sha256-HP79cp4UynKVjLaoNXlR7EcLGj1gyIG3COkpP2eswXs=";
+              "aarch64-darwin" = "sha256-ZTY9m49471g4Y1CgoqT99VvBl07ZSdnCKs8ytqU3gZ8=";
               "aarch64-linux" = "sha256-BlyYzjucrLZoRtU9udwTT/rhqjhFmZDXYx1f33pmSUo=";
               "x86_64-darwin" = "sha256-ZdbMqiV8NZvAjRp5aezknTKKmirTh764qkc2Etis9Xo=";
-              "x86_64-linux" = "sha256-nuLRVX2Oled4MLKWqotUS3qERv6aspL0Kd84zZTKYqM=";
+              "x86_64-linux" = "";
             };
           in
           pkgs.stdenv.mkDerivation {
