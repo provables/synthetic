@@ -15,10 +15,10 @@
         genseqBin =
           let
             hashes = {
-              "aarch64-darwin" = "sha256-0QMRET3AWUHwRVRD5UsoFnNfLi7I6guGfVIs2z0t/aA=";
-              "aarch64-linux" = "sha256-i7mq9xycmjMdbmH3HocgehLx2xFOIA51ZFwApTd2LIw=";
-              "x86_64-darwin" = "sha256-cTrmKhFCuERWN7FU2cRgsNyY7eCgafTlhmzcbhd+qLg=";
-              "x86_64-linux" = "sha256-XV2lXQIdxV1qwUb4s7DHKBVYQeWtdSCrBT0DatNxhRk=";
+              "aarch64-darwin" = "sha256-HP79cp4UynKVjLaoNXlR7EcLGj1gyIG3COkpP2eswXs=";
+              "aarch64-linux" = "";
+              "x86_64-darwin" = "";
+              "x86_64-linux" = "";
             };
           in
           pkgs.stdenv.mkDerivation {
@@ -74,7 +74,8 @@
             )
             makeWrapper ${genseqBin}/bin/genseq $out/bin/genseq \
               --set LEAN_PATH "$LEAN_PATH" \
-              --set PATH "$PATH"
+              --set PATH "$PATH" \
+              --set OEIS_CODOMAINS "${./keywords.json}"
           '';
         };
         python = pkgs.python313.withPackages (ps: [ ps.supervisor ]);
