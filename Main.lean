@@ -98,11 +98,13 @@ def checkFunction (s tag : String) (values : Array (Int × Int)): GenSeqExcept B
   ExceptT.mk <| Prod.fst <$> (Core.CoreM.toIO · state.ctx state.state) do
     liftCommandElabM (checkFunctionM env cod s values)
 
-run_cmd do
-  dbg_trace "foo"
-  let env ← getEnv
-  let c ← checkFunctionM env Codomain.Nat "def A000004 (x : Nat) : Nat :=\n  0" #[((1:Int), (0:Int))]
-  dbg_trace c
+-- run_cmd do
+--   dbg_trace "foo"
+--   let modules := #[`GenSeq, `Mathlib]
+--   initSearchPath (← findSysroot)
+--   let env ← importModules (modules.map ({module := ·})) {} (trustLevel := 1024) (loadExts := true)
+--   let c ← checkFunctionM env Codomain.Nat "def A000004 (x : ℕ) : ℕ :=\n  0" #[((1:Int), (0:Int))]
+--   dbg_trace c
 
 --   let env ← getEnv
 --   let x := ExceptT.run <| checkFunction r#"def huu (n : Nat) : Int := n"# #[(1,1), (2,4)]
