@@ -8,6 +8,8 @@ open Lean Elab Term Syntax Cli Synth Command
 open Std Net
 open Qq
 
+def VERSION := "0.2.0"
+
 abbrev Codomains := Std.HashMap String Codomain
 
 structure GenSeqContext where
@@ -181,7 +183,7 @@ def run_server (port : Nat) : GenSeqState UInt32 := do
   let endpoint := SocketAddress.v4 {addr := addr, port := port}
   socket.bind endpoint
   socket.listen 1
-  IO.println s!"Ready on port {port}"
+  IO.println s!"[Genseq v{VERSION}] Ready on port {port}"
   while true do
     let conn ← socket.accept
     let result := conn.result!
@@ -251,7 +253,7 @@ def run (p : Parsed) : IO UInt32 := do
 
 unsafe
 def cmd : Cmd := `[Cli|
-  "genseq" VIA run; ["0.1.0"]
+  "genseq" VIA run; [VERSION]
   "Generate a Lean definition from the synthetic DSL.
 
   Requests: {\"name\": String, \"offset\": Nat, \"source\": String}
