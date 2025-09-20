@@ -64,19 +64,22 @@ def sum (obj : Json) : GenSeqExcept Json := do
     ("x + y", x + y)
   ]
 
-def checkValuesFor (decl : Name) (values : Array (Int × Int)) : TermElabM Bool := do
+-- let z ← unsafe evalExpr cod (mkConst cod []) value
+def checkValuesFor (cod : Codomain) (decl : Name) (values : Array (Int × Int)) : TermElabM Bool := do
   for (idx, val) in values do
     let e ← instantiateMVars (← Term.elabTerm (← `(term|$(mkIdent decl):ident $(quote idx.toNat)))
-      (some q(Int)))
+      (some (mkConst cod [])))
     Term.synthesizeSyntheticMVarsNoPostponing
-    let z ← unsafe Meta.evalExpr Int q(Int) e
-    if z ≠ val then
+    let z ← unsafe Meta.evalExpr cod (mkConst cod []) e
+    let u : Int := match cod with
+    | .Nat => z
+    | .Int => z
+    if u ≠ val then
       return false
   return true
 
-def checkFunctionM (s : String) (values : Array (Int × Int)) :
+def checkFunctionM (env : Environment) (cod : Codomain) (s : String) (values : Array (Int × Int)) :
     Command.CommandElabM (Except String Bool) := withoutModifyingEnv do
-  let env ← getEnv
   let stx ← match Lean.Parser.runParserCategory env `command s with
   | .error e => return .error s!"error parsing input: {e}"
   | .ok s => pure s
@@ -86,14 +89,21 @@ def checkFunctionM (s : String) (values : Array (Int × Int)) :
   let cmd ← `(command|open Synth)
   elabCommand cmd
   elabCommand stx
-  return .ok <| ← Command.liftTermElabM (checkValuesFor name values)
+  return .ok <| ← Command.liftTermElabM (checkValuesFor cod name values)
 
-def checkFunction (s : String) (values : Array (Int × Int)): GenSeqExcept Bool := do
+def checkFunction (s tag : String) (values : Array (Int × Int)): GenSeqExcept Bool := do
   let state ← read
+  let env := state.env
+  let some cod := state.codomains.get? tag | Except.error s!"Codomain for sequence {tag} not found"
   ExceptT.mk <| Prod.fst <$> (Core.CoreM.toIO · state.ctx state.state) do
-    liftCommandElabM (checkFunctionM s values)
+    liftCommandElabM (checkFunctionM env cod s values)
 
--- run_cmd do
+run_cmd do
+  dbg_trace "foo"
+  let env ← getEnv
+  let c ← checkFunctionM env Codomain.Nat "def A000004 (x : Nat) : Nat :=\n  0" #[((1:Int), (0:Int))]
+  dbg_trace c
+
 --   let env ← getEnv
 --   let x := ExceptT.run <| checkFunction r#"def huu (n : Nat) : Int := n"# #[(1,1), (2,4)]
 --   let z ← GenSeqState.run x env {fileName := "", fileMap := default} {env}
@@ -102,7 +112,8 @@ def checkFunction (s : String) (values : Array (Int × Int)): GenSeqExcept Bool 
 def eval (obj : Json) : GenSeqExcept Json := do
   let src ← obj.getObjValAs? String "src" |>.mapError (s!"missing src: {·}")
   let values ← obj.getObjValAs? (Array (Int × Int)) "values" |>.mapError (s!"missing values: {·}")
-  let result ← checkFunction src values
+  let tag ← obj.getObjValAs? String "tag" |>.mapError (s!"missing tag: {·}")
+  let result ← checkFunction src tag values
   dbg_trace s!"Got result {result}"
   return Json.mkObj [
     ("eval", result)
