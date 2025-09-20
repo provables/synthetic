@@ -1,5 +1,6 @@
 import Lean.Syntax
 import Qq
+import GenSeq.Process
 
 open Lean Elab Term Syntax Qq
 
@@ -136,5 +137,39 @@ end
 def TtoLean (name : String) (offst : Nat) (t : T) : String :=
   s!"def {name} (n : ℕ) : ℤ :=\n  let x := n - {offst}\n  {TtoLeanAux 0 t}"
 
+def TtoLeanSimplified (name : String) (offst : Nat) (cod : Codomain) (t : T) :
+    TermElabM String := do
+  let env ← getEnv
+  let v := Lean.Parser.runParserCategory env `term <| TtoLeanAux 0 t
+  match v with
+  | .ok w =>
+    let x ←  ProcessM.run <| processTerm ⟨w⟩
+    let y ← PrettyPrinter.ppTerm x
+    let z := if cod == .Nat then
+      s!"Int.toNat <| {y}"
+    else
+      s!"{y}"
+    return if offst == 0 then
+        s!"def {name} (x : ℕ) : {cod} :=\n  {z}"
+      else
+        s!"def {name} (n : ℕ) : {cod} :=\n  let x := n - {offst}\n  {z}"
+  | .error s =>
+    return s!"error: {s}"
+
 def DSLToLean (name source : String) (offst : Nat) : TermElabM (Except String String) := do
   return (← parse source).map (TtoLean name offst ·)
+
+def DSLToLeanSimplified (name source : String) (offst : Nat) (cod : Codomain) :
+    TermElabM (Except String String) := do
+  let u ← parse source
+  let v := u.map (TtoLeanSimplified name offst cod ·)
+  match v with
+  | .ok w =>
+    return .ok (← w)
+  | .error s =>
+    return .error s
+
+-- run_elab do
+--   let z := "1 + x"
+--   let v ← DSLToLeanSimplified "foo" z 1
+--   dbg_trace v

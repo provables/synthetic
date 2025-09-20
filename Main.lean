@@ -1,5 +1,6 @@
 import Cli.Basic
 import GenSeq
+import GenSeq.Defs
 import Qq
 import Std.Internal.UV.TCP
 
@@ -7,17 +8,21 @@ open Lean Elab Term Syntax Cli Synth Command
 open Std Net
 open Qq
 
+abbrev Codomains := Std.HashMap String Codomain
+
 structure GenSeqContext where
   env : Environment
   ctx : Core.Context
   state : Core.State
+  codomains : Codomains
 
 abbrev GenSeqState a := ReaderT GenSeqContext IO a
 abbrev GenSeqExcept m := ExceptT String GenSeqState m
 
 def GenSeqState.run {α : Type} (x : GenSeqState α)
-    (env : Environment) (ctx : Core.Context) (state : Core.State) : IO α :=
-  ReaderT.run x ⟨env, ctx, state⟩
+    (env : Environment) (ctx : Core.Context) (state : Core.State) (codomains : Codomains) :
+    IO α :=
+  ReaderT.run x ⟨env, ctx, state, codomains⟩
 
 instance : ToString SocketAddress where
   toString
@@ -28,6 +33,13 @@ def toLean (name source : String) (offst : Nat) : GenSeqExcept String := do
   let state ← read
   ExceptT.mk <| Prod.fst <$> (Meta.MetaM.toIO · state.ctx state.state) do
     TermElabM.run' (DSLToLean name source offst)
+
+def toSimplifiedLean (name source : String) (offst : Nat) : GenSeqExcept String := do
+  let state ← read
+  let some cod := state.codomains[name]?
+    | ExceptT.mk (return .error s!"Cannot find codomain of {name}")
+  ExceptT.mk <| Prod.fst <$> (Meta.MetaM.toIO · state.ctx state.state) do
+    TermElabM.run' (DSLToLeanSimplified name source offst cod)
 
 def gen (obj : Json) : GenSeqExcept Json := do
   let name ← obj.getObjValAs? String "name" |>.mapError (s!"missing name: {·}")
@@ -179,12 +191,48 @@ def run_server (port : Nat) : GenSeqState UInt32 := do
         IO.println s!"client connected: {← s.getPeerName}"
         let state ← read
         let _u ← IO.asTask (
-          GenSeqState.run (process_client s) state.env state.ctx state.state
+          GenSeqState.run (process_client s) state.env state.ctx state.state state.codomains
         )
       | .error e =>
         IO.println s!"client connection error: {e}"
     )
   return 0
+
+abbrev CodM := ExceptT String IO
+def CodM.run {α : Type} (a : CodM α) : IO (Option α) := do
+  let x ← ExceptT.run a
+  match x with
+  | .ok y =>
+    return some y
+  | .error s =>
+    IO.println s!"Codomain error: {s}"
+    return none
+
+def codomains_json (file : String) : CodM Json := do
+  Json.parse (← IO.FS.readFile file)
+
+def codomains_from_json (cods : Json) : CodM Codomains := do
+  let x ← cods.getObj?
+  x.foldM (init := ∅) (fun prev key val => do
+    return Std.HashMap.insert prev key (
+      if (← val.getNat?) == 0 then Codomain.Nat else Codomain.Int
+    )
+  )
+
+def codomains_json_from_var (var : String) : CodM Json := do
+  let some cods := (← IO.getEnv var) | .error s!"cannot find environment variable '{var}'"
+  codomains_json cods
+
+def codomains_from_var (var : String) : CodM Codomains := do
+  codomains_from_json (← codomains_json_from_var var)
+
+-- run_cmd do
+--   let x : CodM _ := do
+--     let a ← codomains_json "/Users/walter/repos/oeisdata/small.json"
+--     let b ← codomains_from_json a
+--     return b
+--   let z ← CodM.run x
+--   dbg_trace (repr z)
 
 unsafe
 def run (p : Parsed) : IO UInt32 := do
@@ -194,8 +242,9 @@ def run (p : Parsed) : IO UInt32 := do
   let env ← importModules (modules.map ({module := ·})) {} (trustLevel := 1024) (loadExts := true)
   let ctx : Core.Context := {fileName := "", fileMap := default}
   let state : Core.State := {env}
+  let some codomains ← CodM.run <| codomains_from_var "OEIS_CODOMAINS" | return 1
   let port := p.flag? "port" |>.map (·.as! Nat) |>.getD 8000
-  GenSeqState.run (run_server port) env ctx state
+  GenSeqState.run (run_server port) env ctx state codomains
 
 unsafe
 def cmd : Cmd := `[Cli|
