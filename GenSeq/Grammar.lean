@@ -143,7 +143,7 @@ def TtoLeanSimplified (name : String) (offst : Nat) (cod : Codomain) (t : T) :
   let v := Lean.Parser.runParserCategory env `term <| TtoLeanAux 0 t
   match v with
   | .ok w =>
-    let x ←  ProcessM.run <| processTerm ⟨w⟩
+    let x ← ProcessM.run (processTerm ⟨w⟩) {(default : ProcessState) with safeCtx := true}
     let y ← PrettyPrinter.ppTerm x
     let z := if cod == .Nat then
       s!"Int.toNat <| {y}"
@@ -170,6 +170,6 @@ def DSLToLeanSimplified (name source : String) (offst : Nat) (cod : Codomain) :
     return .error s
 
 -- run_elab do
---   let z := "1 + x"
---   let v ← DSLToLeanSimplified "foo" z 1
+--   let z2 := "loop(\\(x,y).x + x, x, 1)"
+--   let v ← DSLToLeanSimplified "foo" z2 0 .Int
 --   dbg_trace v

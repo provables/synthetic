@@ -156,21 +156,21 @@ partial def processTerm (term : TSyntax `term) : ProcessM (TSyntax `term) := do
     setSafe
     let tb ← processTerm b
     `(term|if $t1 ≤ 0 then $ta else $tb)
-  | `(term|λ(x y : ℤ) ↦ $t:term) =>
-    --dbg_trace s!"--- fun"
+  | `(term|λ(x y : $_:term) ↦ $t:term) =>
+    --dbg_trace "--- fun"
     setSafe
     newFreeVars
     let t1 ← processTerm t
     let f1 ← popFreeVars
     closeFreeVars
     if hashSetEq f1 {`x} then
-      `(term|λ($(mkIdent `x) $(mkIdent `_y) : ℤ) ↦ $t1)
+      `(term|λ($(mkIdent `x) $(mkIdent `_y)) ↦ $t1)
     else if hashSetEq f1 {`y} then
-      `(term|λ($(mkIdent `_x) $(mkIdent `y) : ℤ) ↦ $t1)
+      `(term|λ($(mkIdent `_x) $(mkIdent `y)) ↦ $t1)
     else if hashSetEq f1 {`x, `y} then
-      `(term|λ($(mkIdent `x) $(mkIdent `y) : ℤ) ↦ $t1)
+      `(term|λ($(mkIdent `x) $(mkIdent `y)) ↦ $t1)
     else
-      `(term|λ($(mkIdent `_x) $(mkIdent `_y) : ℤ) ↦ $t1)
+      `(term|λ($(mkIdent `_x) $(mkIdent `_y)) ↦ $t1)
   | `(term|λ(x : ℤ) ↦ $t:term) =>
     setSafe
     newFreeVars
@@ -178,9 +178,9 @@ partial def processTerm (term : TSyntax `term) : ProcessM (TSyntax `term) := do
     let f ← popFreeVars
     closeFreeVars
     if hashSetEq f {`x} then
-      `(term|λ($(mkIdent `x) : ℤ) ↦ $t1)
+      `(term|λ($(mkIdent `x)) ↦ $t1)
     else
-      `(term|λ($(mkIdent `_x) : ℤ) ↦ $t1)
+      `(term|λ($(mkIdent `_x)) ↦ $t1)
   | `(term|loop $f $a $b) =>
     --dbg_trace s!"--- loop"
     setUnsafe

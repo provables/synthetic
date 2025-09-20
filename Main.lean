@@ -45,7 +45,7 @@ def gen (obj : Json) : GenSeqExcept Json := do
   let name ← obj.getObjValAs? String "name" |>.mapError (s!"missing name: {·}")
   let offst ← obj.getObjValAs? Nat "offset" |>.mapError (s!"missing offset: {·}")
   let source ← obj.getObjValAs? String "source" |>.mapError (s!"missing source: {·}")
-  let z ← toLean name source offst
+  let z ← toSimplifiedLean name source offst
   return Json.mkObj [
     ("lean", z)
   ]
@@ -209,7 +209,10 @@ def CodM.run {α : Type} (a : CodM α) : IO (Option α) := do
     return none
 
 def codomains_json (file : String) : CodM Json := do
-  Json.parse (← IO.FS.readFile file)
+  IO.print s!"Loading codomains from file: {file} ..."
+  let x ← Json.parse (← IO.FS.readFile file)
+  IO.println "done"
+  return x
 
 def codomains_from_json (cods : Json) : CodM Codomains := do
   let x ← cods.getObj?
