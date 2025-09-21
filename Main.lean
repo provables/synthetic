@@ -64,7 +64,6 @@ def sum (obj : Json) : GenSeqExcept Json := do
     ("x + y", x + y)
   ]
 
--- let z ← unsafe evalExpr cod (mkConst cod []) value
 def checkValuesFor (cod : Codomain) (decl : Name) (values : Array (Int × Int)) : TermElabM Bool := do
   for (idx, val) in values do
     let e ← instantiateMVars (← Term.elabTerm (← `(term|$(mkIdent decl):ident $(quote idx.toNat)))
