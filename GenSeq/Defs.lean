@@ -52,4 +52,3 @@ instance : ToString Codomain where
   toString
   | .Nat => "ℕ"
   | .Int => "ℤ"
-

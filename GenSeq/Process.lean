@@ -1,7 +1,7 @@
 import Lean
 import Qq
-import GenSeq.Semantics
 import GenSeq.Defs
+import Sequencelib.Meta.Synthetic
 
 open Synth
 open Lean Expr Elab Term Tactic Meta Qq Syntax Command

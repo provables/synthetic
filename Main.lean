@@ -1,8 +1,9 @@
 import Cli.Basic
-import GenSeq
 import GenSeq.Defs
+import GenSeq.Grammar
 import Qq
 import Std.Internal.UV.TCP
+import Sequencelib.Meta.Synthetic
 
 open Lean Elab Term Syntax Cli Synth Command
 open Std Net
@@ -99,11 +100,11 @@ def checkFunction (s tag : String) (values : Array (Int × Int)): GenSeqExcept B
 
 -- run_cmd do
 --   dbg_trace "foo"
---   let modules := #[`GenSeq, `Mathlib]
+--   let modules := #[`GenSeq, `Mathlib, `Sequencelib.Meta.Synthetic]
 --   initSearchPath (← findSysroot)
 --   let env ← importModules (modules.map ({module := ·})) {} (trustLevel := 1024) (loadExts := true)
---   let c ← checkFunctionM env Codomain.Nat "def A000004 (x : ℕ) : ℕ :=\n  0" #[((1:Int), (0:Int))]
---   dbg_trace c
+--   let x := Lean.Parser.runParserCategory env `command "@[simp]\ndef f (x : Nat) : Nat := x"
+--   dbg_trace x
 
 --   let env ← getEnv
 --   let x := ExceptT.run <| checkFunction r#"def huu (n : Nat) : Int := n"# #[(1,1), (2,4)]

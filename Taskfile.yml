@@ -41,7 +41,7 @@ tasks:
             echo -n ":.lake/packages/$f/.lake/build/lib/lean"; 
           done
     cmds:
-      - 'LEAN_PATH={{ .LEAN_PATH }} .lake/build/bin/genseq {{.CLI_ARGS}}'
+      - 'OEIS_CODOMAINS=./keywords.json LEAN_PATH={{ .LEAN_PATH }} .lake/build/bin/genseq {{.CLI_ARGS}}'
     deps:
       - build
       - compile

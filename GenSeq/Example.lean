@@ -1,4 +1,4 @@
-import GenSeq
+import Sequencelib.Meta.Synthetic
 
 open Synth
 
