@@ -1,9 +1,9 @@
 import Cli.Basic
-import GenSeq.Defs
 import GenSeq.Grammar
 import Qq
 import Std.Internal.UV.TCP
 import Sequencelib.Meta.Synthetic
+import Sequencelib.Meta.Codomain
 
 open Lean Elab Term Syntax Cli Synth Command
 open Std Net
@@ -91,20 +91,39 @@ def checkFunctionM (env : Environment) (cod : Codomain) (s : String) (values : A
   elabCommand stx
   return .ok <| ← Command.liftTermElabM (checkValuesFor cod name values)
 
-def checkFunction (s tag : String) (values : Array (Int × Int)): GenSeqExcept Bool := do
+def checkFunction (s tag : String) (values : Array (Int × Int)) : GenSeqExcept Bool := do
   let state ← read
   let env := state.env
   let some cod := state.codomains.get? tag | Except.error s!"Codomain for sequence {tag} not found"
   ExceptT.mk <| Prod.fst <$> (Core.CoreM.toIO · state.ctx state.state) do
     liftCommandElabM (checkFunctionM env cod s values)
 
+def doCompileM (env : Environment) (src : String) : Command.CommandElabM (Except String Bool) := do
+  let stx ← match Lean.Parser.runParserCategory env `command src with
+  | .error e => return .error s!"error parsing input: {e}"
+  | .ok s => pure s
+  if !stx.isOfKind `Lean.Parser.Command.declaration then
+    return .error "not a definition"
+  elabCommand (← `(command|open Synth))
+  elabCommand stx
+  let messages := (← get).messages
+  if messages.hasErrors then
+    return .error <| String.intercalate "\n" (← messages.toList.mapM (·.toString))
+  return .ok true
+
+def doCompile (src : String) : GenSeqExcept Bool := do
+  let state ← read
+  ExceptT.mk <| Prod.fst <$> (Core.CoreM.toIO · state.ctx state.state) do
+    liftCommandElabM (doCompileM state.env src) false
+
 -- run_cmd do
 --   dbg_trace "foo"
 --   let modules := #[`GenSeq, `Mathlib, `Sequencelib.Meta.Synthetic]
 --   initSearchPath (← findSysroot)
 --   let env ← importModules (modules.map ({module := ·})) {} (trustLevel := 1024) (loadExts := true)
---   let x := Lean.Parser.runParserCategory env `command "@[simp]\ndef f (x : Nat) : Nat := x"
---   dbg_trace x
+--   let u := doCompile "def f (x : Nat) : Nat := x"
+--   let v := ExceptT.run u
+--   dbg_trace ">>> {u} <<<<"
 
 --   let env ← getEnv
 --   let x := ExceptT.run <| checkFunction r#"def huu (n : Nat) : Int := n"# #[(1,1), (2,4)]
@@ -121,11 +140,19 @@ def eval (obj : Json) : GenSeqExcept Json := do
     ("eval", result)
   ]
 
+def compile (obj : Json) : GenSeqExcept Json := do
+  let src ← obj.getObjValAs? String "src" |>.mapError (s!"missing src: {·}")
+  let result ← doCompile src
+  return Json.mkObj [
+    ("compiled", result)
+  ]
+
 def Commands : Std.HashMap String (Json → GenSeqExcept Json) := .ofList [
   ("ready", ready),
   ("gen", gen),
   ("sum", sum),
-  ("eval", eval)
+  ("eval", eval),
+  ("compile", compile)
 ]
 
 def errorToJson (e : String) : Json := Json.mkObj [("status", false), ("error", e)]
@@ -254,7 +281,7 @@ def codomains_from_var (var : String) : CodM Codomains := do
 
 unsafe
 def run (p : Parsed) : IO UInt32 := do
-  let modules := #[`GenSeq, `Mathlib]
+  let modules := #[`GenSeq, `Mathlib, `Sequencelib.Meta]
   enableInitializersExecution
   initSearchPath (← findSysroot)
   let env ← importModules (modules.map ({module := ·})) {} (trustLevel := 1024) (loadExts := true)

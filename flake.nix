@@ -78,7 +78,7 @@
               --set OEIS_CODOMAINS "${./keywords.json}"
           '';
         };
-        python = pkgs.python313.withPackages (ps: [ ps.supervisor ]);
+        python = pkgs.python313.withPackages (ps: [ ps.supervisor ps.ipython ]);
         supervisedGenseq = pkgs.writeShellApplication {
           name = "genseq";
           runtimeInputs = [ python genseq pkgs.getopt pkgs.gnused ];
@@ -141,6 +141,7 @@
             elan
             go-task
             python
+            uv
             findutils
             lsof
             supervisedGenseq
