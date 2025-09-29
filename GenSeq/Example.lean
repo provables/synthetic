@@ -1,4 +1,5 @@
-import Sequencelib.Meta.Synthetic
+import Mathlib
+import Sequencelib.Meta
 
 open Synth
 

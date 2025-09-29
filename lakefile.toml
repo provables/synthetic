@@ -20,7 +20,7 @@ rev = "v4.20.0"
 [[require]]
 name = "sequencelib"
 git = "https://github.com/provables/sequencelib.git"
-rev = "SYNTH_v0.2"
+rev = "SYNTH_v0.4"
 
 [[lean_lib]]
 name = "GenSeq"
@@ -29,3 +29,4 @@ name = "GenSeq"
 supportInterpreter = true
 name = "genseq"
 root = "Main"
+needs = ["GenSeq"]

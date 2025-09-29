@@ -1,7 +1,7 @@
 import Lean
 import Qq
-import GenSeq.Defs
 import Sequencelib.Meta.Synthetic
+import Sequencelib.Meta.Codomain
 
 open Synth
 open Lean Expr Elab Term Tactic Meta Qq Syntax Command
