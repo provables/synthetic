@@ -9,7 +9,7 @@ open Lean Elab Term Syntax Cli Synth Command
 open Std Net
 open Qq
 
-def VERSION := "0.2.1"
+def VERSION := "0.3.0"
 
 abbrev Codomains := Std.HashMap String Codomain
 
@@ -296,9 +296,9 @@ def cmd : Cmd := `[Cli|
   "genseq" VIA run; [VERSION]
   "Generate a Lean definition from the synthetic DSL.
 
-  Requests: {\"name\": String, \"offset\": Nat, \"source\": String}
+  Requests: {\"cmd\": String, \"args\": { ... }}
   Responses:
-    - {\"status\": true, \"lean\": String}
+    - {\"status\": true, \"result\": { ... }}
     - {\"status\": false, \"error\": String}
   "
 
