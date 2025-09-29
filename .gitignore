@@ -4,3 +4,4 @@ result
 .task/
 supervisord.log
 supervisord.pid
+*.pyc
