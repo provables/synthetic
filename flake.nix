@@ -5,7 +5,7 @@
     shell-utils.url = "github:waltermoreira/shell-utils";
     lean-toolchain-nix.url = "github:provables/lean-toolchain-nix";
   };
-  outputs = { self, nixpkgs, flake-utils, shell-utils, lean-toolchain-nix }:
+  outputs = { nixpkgs, flake-utils, shell-utils, lean-toolchain-nix, ... }:
     flake-utils.lib.eachDefaultSystem (system:
       let
         pkgs = nixpkgs.legacyPackages.${system};
@@ -15,7 +15,7 @@
         genseqBin =
           let
             hashes = {
-              "aarch64-darwin" = "sha256-ZTY9m49471g4Y1CgoqT99VvBl07ZSdnCKs8ytqU3gZ8=";
+              "aarch64-darwin" = "sha256-XYqG5XVcidFEoS03zWWsUwrNCcqv35Edym9tMGgz7SA=";
               "aarch64-linux" = "sha256-BlyYzjucrLZoRtU9udwTT/rhqjhFmZDXYx1f33pmSUo=";
               "x86_64-darwin" = "sha256-ZdbMqiV8NZvAjRp5aezknTKKmirTh764qkc2Etis9Xo=";
               "x86_64-linux" = "sha256-cZsduSi1ZvYbYz0natLFg5Syn4vKhrvStTl3T2BFaFY=";
@@ -81,11 +81,30 @@
         python = pkgs.python313.withPackages (ps: [ ps.supervisor ps.ipython ]);
         supervisedGenseq = pkgs.writeShellApplication {
           name = "genseq";
-          runtimeInputs = [ python genseq pkgs.getopt pkgs.gnused ];
+          runtimeInputs = with pkgs; [
+            python
+            genseq
+            getopt
+            gnused
+            lsof
+            netcat
+          ];
           text = ''
-            args=$(getopt -o "vhp:s" -l "version,help,port:,supervise" -- "$@")
+            do_kill () {
+              supervisorctl stop all
+              supervisorctl shutdown
+            }
+            do_wait () {
+              while true; do 
+                if nc -z -w1 localhost "$1" >/dev/null 2>&1; then break; fi
+                sleep 1
+              done
+            }
+            args=$(getopt -o "vhp:swnk" -l "version,help,port:,supervise,wait,foreground,kill" -- "$@")
             eval set -- "$args"
             supervise=""
+            foreground=""
+            wait=""
             port="8000"
             while true
             do
@@ -105,6 +124,16 @@
             -s|--supervise)
               supervise="1"
               ;;
+            -n|--foreground)
+              foreground="-n"
+              ;;
+            -k|--kill)
+              do_kill
+              exit 0
+              ;;
+            -w|--wait)
+              wait="1"
+              ;;
             --)
               break
               ;;
@@ -123,7 +152,12 @@
               fi
               config=$(mktemp)
               sed "s/PORT/$port/" < ${./supervisord.conf.template} > "$config"
-              supervisord -n -c "$config"
+              supervisord $foreground -c "$config"
+              if [[ ( -z "$foreground" ) && ( -n "$wait" ) ]]; then
+                echo -n "Waiting for server to be responsive... "
+                do_wait "$port"
+                echo "done"
+              fi
             fi
           '';
         };
@@ -144,7 +178,7 @@
             uv
             findutils
             lsof
-            supervisedGenseq
+            # supervisedGenseq
           ] ++ lib.optional stdenv.isDarwin apple-sdk_14;
         };
       }

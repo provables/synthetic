@@ -303,7 +303,11 @@ def cmd : Cmd := `[Cli|
   "
 
   FLAGS:
-    p, port : Nat;      "Listen at port <port> (default: 8000)"
+    p, port : Nat;        "Listen at port <port> (default: 8000)"
+    s, supervise;         "Start genseq under supervisord"
+    w, wait;              "Wait for the server to be ready before going to the background"
+    n, foreground;        "Keep the process in the foreground"
+    k, kill;              "Stop a supervised genseq"
 ]
 
 unsafe
