@@ -98,7 +98,7 @@ def checkFunction (s tag : String) (values : Array (Int × Int)) : GenSeqExcept 
   ExceptT.mk <| Prod.fst <$> (Core.CoreM.toIO · state.ctx state.state) do
     liftCommandElabM (checkFunctionM env cod s values)
 
-def doCompileM (env : Environment) (src : String) : Command.CommandElabM (Except String Bool) := do
+def doCompileM (env : Environment) (src : String) : Command.CommandElabM (Except String Unit) := do
   let stx ← match Lean.Parser.runParserCategory env `command src with
   | .error e => return .error s!"error parsing input: {e}"
   | .ok s => pure s
@@ -109,9 +109,9 @@ def doCompileM (env : Environment) (src : String) : Command.CommandElabM (Except
   let messages := (← get).messages
   if messages.hasErrors then
     return .error <| String.intercalate "\n" (← messages.toList.mapM (·.toString))
-  return .ok true
+  return .ok ()
 
-def doCompile (src : String) : GenSeqExcept Bool := do
+def doCompile (src : String) : GenSeqExcept Unit := do
   let state ← read
   ExceptT.mk <| Prod.fst <$> (Core.CoreM.toIO · state.ctx state.state) do
     liftCommandElabM (doCompileM state.env src) false
@@ -142,9 +142,9 @@ def eval (obj : Json) : GenSeqExcept Json := do
 
 def compile (obj : Json) : GenSeqExcept Json := do
   let src ← obj.getObjValAs? String "src" |>.mapError (s!"missing src: {·}")
-  let result ← doCompile src
+  doCompile src
   return Json.mkObj [
-    ("compiled", result)
+    ("compiled", true)
   ]
 
 def Commands : Std.HashMap String (Json → GenSeqExcept Json) := .ofList [
