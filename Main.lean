@@ -4,6 +4,7 @@ import Qq
 import Std.Internal.UV.TCP
 import Sequencelib.Meta.Synthetic
 import Sequencelib.Meta.Codomain
+import Sequencelib.Meta.DeriveTheorems
 
 open Lean Elab Term Syntax Cli Synth Command
 open Std Net
@@ -138,13 +139,14 @@ do
       return .error <| String.intercalate "\n" (← messages.toList.mapM (·.toString))
     return .ok ()
 
+def toIO {α : Type}
+      (x : CommandElabM α) (state : GenSeqContext) (throwOnError : Bool := true) : IO α := do
+    Prod.fst <$> (Core.CoreM.toIO · state.ctx state.state) (liftCommandElabM x throwOnError)
+
 def doCompile (src : String) : GenSeqExcept Unit := do
   let state ← read
   let x : IO (Except String Unit) := try
-    withTimeout 10000 <| do
-      IO.println "starting compilation"
-      Prod.fst <$> (Core.CoreM.toIO · state.ctx state.state) do
-        liftCommandElabM (doCompileM state.env src) false
+    withTimeout 5000 <| toIO (doCompileM state.env src) state false
   catch
     | .userError "Timeout" =>
       return Except.error "Compilation timed out"
@@ -182,12 +184,41 @@ def compile (obj : Json) : GenSeqExcept Json := do
     ("compiled", true)
   ]
 
+def doProveM (env : Environment) (decl : Name) (src : String) (index : Nat) (value : Int) :
+    CommandElabM (Except String Unit) :=
+  withoutModifyingEnv do
+    match (← doCompileM env src) with
+    | .ok _ =>
+      let cod ← codomainOfDecl decl
+      let valueCod := intToCod value
+      let result ← liftTermElabM <| deriveTheorem (c := cod) decl index valueCod default
+      match result with
+      | some s => return .error s
+      | none => return .ok ()
+    | .error e =>
+      return .error e
+
+def doProve (decl : Name) (src : String) (index : Nat) (value : Int) : GenSeqExcept Unit := do
+  let state ← read
+  ExceptT.mk <| toIO (doProveM state.env decl src index value) state false
+
+def prove (obj : Json) : GenSeqExcept Json := do
+  let src ← obj.getObjValAs? String "src" |>.mapError (s!"missing src: {·}")
+  let name ← obj.getObjValAs? String "name" |>.mapError (s!"missing name: {·}")
+  let index ← obj.getObjValAs? Nat "index" |>.mapError (s!"missing index: {·}")
+  let value ← obj.getObjValAs? Int "value" |>.mapError (s!"missing value: {·}")
+  doProve (.mkSimple name) src index value
+  return Json.mkObj [
+    ("proved", true)
+  ]
+
 def Commands : Std.HashMap String (Json → GenSeqExcept Json) := .ofList [
   ("ready", ready),
   ("gen", gen),
   ("sum", sum),
   ("eval", eval),
-  ("compile", compile)
+  ("compile", compile),
+  ("prove", prove)
 ]
 
 def errorToJson (e : String) : Json := Json.mkObj [("status", false), ("error", e)]
