@@ -98,23 +98,58 @@ def checkFunction (s tag : String) (values : Array (Int × Int)) : GenSeqExcept 
   ExceptT.mk <| Prod.fst <$> (Core.CoreM.toIO · state.ctx state.state) do
     liftCommandElabM (checkFunctionM env cod s values)
 
-def doCompileM (env : Environment) (src : String) : Command.CommandElabM (Except String Unit) := do
-  let stx ← match Lean.Parser.runParserCategory env `command src with
-  | .error e => return .error s!"error parsing input: {e}"
-  | .ok s => pure s
-  if !stx.isOfKind `Lean.Parser.Command.declaration then
-    return .error "not a definition"
-  elabCommand (← `(command|open Synth))
-  elabCommand stx
-  let messages := (← get).messages
-  if messages.hasErrors then
-    return .error <| String.intercalate "\n" (← messages.toList.mapM (·.toString))
-  return .ok ()
+/--
+Return type used internally by `withTimeout`.
+-/
+inductive TimeoutResult (α : Type) where
+  | success (val : α)
+  | timeout
+
+/--
+Run a computation with a timeout.
+-/
+def withTimeout {α : Type} (timeout : UInt32) (x : IO α) : IO α := do
+  let timeoutTask ← IO.asTask <| IO.sleep timeout >>= fun _ => return TimeoutResult.timeout
+  let mainTask ← IO.asTask (prio := .dedicated) <| TimeoutResult.success <$> x
+  match ← IO.waitAny [mainTask, timeoutTask] with
+  | .ok <| .success a =>
+    IO.cancel timeoutTask
+    return a
+  | .ok <| .timeout =>
+    IO.cancel mainTask
+    throw <| .userError s!"Timeout"
+  | .error e =>
+    IO.cancel mainTask
+    IO.cancel timeoutTask
+    throw e
+
+def doCompileM (env : Environment) (src : String) : Command.CommandElabM (Except String Unit) :=
+--  withoutModifyingEnv <| do
+do
+    let stx ← match Lean.Parser.runParserCategory env `command src with
+    | .error e => return .error s!"error parsing input: {e}"
+    | .ok s => pure s
+    if !stx.isOfKind `Lean.Parser.Command.declaration then
+      return .error "not a definition"
+    elabCommand (← `(command|open Synth))
+    elabCommand stx
+    let messages := (← get).messages
+    if messages.hasErrors then
+      return .error <| String.intercalate "\n" (← messages.toList.mapM (·.toString))
+    return .ok ()
 
 def doCompile (src : String) : GenSeqExcept Unit := do
   let state ← read
-  ExceptT.mk <| Prod.fst <$> (Core.CoreM.toIO · state.ctx state.state) do
-    liftCommandElabM (doCompileM state.env src) false
+  let x : IO (Except String Unit) := try
+    withTimeout 10000 <| do
+      IO.println "starting compilation"
+      Prod.fst <$> (Core.CoreM.toIO · state.ctx state.state) do
+        liftCommandElabM (doCompileM state.env src) false
+  catch
+    | .userError "Timeout" =>
+      return Except.error "Compilation timed out"
+    | e => throw e
+  ExceptT.mk x
 
 -- run_cmd do
 --   dbg_trace "foo"
