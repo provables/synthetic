@@ -189,12 +189,15 @@ def doProveM (env : Environment) (decl : Name) (src : String) (index : Nat) (val
   withoutModifyingEnv do
     match (← doCompileM env src) with
     | .ok _ =>
-      let cod ← codomainOfDecl decl
-      let valueCod := intToCod value
-      let result ← liftTermElabM <| deriveTheorem (c := cod) decl index valueCod default
-      match result with
-      | some s => return .error s
-      | none => return .ok ()
+      try
+        let cod ← codomainOfDecl decl
+        let valueCod := intToCod value
+        let result ← liftTermElabM <| deriveTheorem (c := cod) decl index valueCod default
+        match result with
+        | some s => return .error s
+        | none => return .ok ()
+      catch
+      | e => return .error (← e.toMessageData.toString)
     | .error e =>
       return .error e
 
