@@ -215,13 +215,52 @@ def prove (obj : Json) : GenSeqExcept Json := do
     ("proved", true)
   ]
 
+def doProveBatchM
+    (env : Environment) (decl : Name) (src : String) (values : Array (Nat × Option Int))
+    (timeout : Option Nat) : CommandElabM (Except String Unit) :=
+  withoutModifyingEnv do
+    try
+      for (index, value) in values do
+        match value with
+        | some v =>
+          Lean.ofExcept <| (← doProveM env decl src index v)
+        | none =>
+          Lean.ofExcept <| (← doCompileM env src)
+          -- Warning: this will evaluate the sequence to compute the value
+          -- (might be expensive)
+          match (← liftTermElabM <| deriveTheoremForIndex' decl index default) with
+          | some e => return .error e
+          | none => pure ()
+      catch
+      | e => return .error (← e.toMessageData.toString)
+    return .ok ()
+
+def doProveBatch (decl : Name) (src : String) (values : Array (Nat × Option Int))
+    (timeout : Option Nat) : GenSeqExcept Unit := do
+  let state ← read
+  ExceptT.mk <| toIO (doProveBatchM state.env decl src values timeout) state false
+
+def proveBatch (obj : Json) : GenSeqExcept Json := do
+  let src ← obj.getObjValAs? String "src" |>.mapError (s!"missing src: {·}")
+  let name ← obj.getObjValAs? String "name" |>.mapError (s!"missing name: {·}")
+  let values ← obj.getObjValAs? (Array (Nat × Option Int)) "values" |>.mapError (s!"missing values: {·}")
+  let timeout := obj.getObjValAs? Nat "timeout" |>.toOption
+  doProveBatch (.mkSimple name) src values timeout
+  return Json.mkObj [
+    ("proved", true)
+  ]
+
+-- TODO: Make a batch command for proving (using [idx,value] via derivetheorem)
+--       or deriveTheoremForIndex when value is none
+-- TODO: get proving function to use a timeout from the json object
 def Commands : Std.HashMap String (Json → GenSeqExcept Json) := .ofList [
   ("ready", ready),
   ("gen", gen),
   ("sum", sum),
   ("eval", eval),
   ("compile", compile),
-  ("prove", prove)
+  ("prove", prove),
+  ("prove_batch", proveBatch)
 ]
 
 def errorToJson (e : String) : Json := Json.mkObj [("status", false), ("error", e)]
