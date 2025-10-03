@@ -15,7 +15,7 @@
         genseqBin =
           let
             hashes = {
-              "aarch64-darwin" = "sha256-6H9eQk879pL8mlUL7LZcvUUfTkFdRSVJQvt8nTj5zyQ=";
+              "aarch64-darwin" = "sha256-fZ6Y89a9aApKe4LXUUOknT7JSV5hTnT5ZfY4mEAuhe4=";
               "aarch64-linux" = "";
               "x86_64-darwin" = "";
               "x86_64-linux" = "";

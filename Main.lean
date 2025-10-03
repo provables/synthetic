@@ -10,7 +10,7 @@ open Lean Elab Term Syntax Cli Synth Command
 open Std Net
 open Qq
 
-def VERSION := "0.3.1"
+def VERSION := "0.3.2"
 
 abbrev Codomains := Std.HashMap String Codomain
 
@@ -184,22 +184,24 @@ def compile (obj : Json) : GenSeqExcept Json := do
     ("compiled", true)
   ]
 
+def doProveCompiledM (decl : Name) (index : Nat) (value : Int) :
+    CommandElabM (Except String Unit) := do
+  try
+    let cod ← codomainOfDecl decl
+    let valueCod := intToCod value
+    let result ← liftTermElabM <| deriveTheorem (c := cod) decl index valueCod default
+    match result with
+    | some s => return .error s
+    | none => return .ok ()
+  catch
+  | e => return .error (← e.toMessageData.toString)
+
 def doProveM (env : Environment) (decl : Name) (src : String) (index : Nat) (value : Int) :
     CommandElabM (Except String Unit) :=
   withoutModifyingEnv do
     match (← doCompileM env src) with
-    | .ok _ =>
-      try
-        let cod ← codomainOfDecl decl
-        let valueCod := intToCod value
-        let result ← liftTermElabM <| deriveTheorem (c := cod) decl index valueCod default
-        match result with
-        | some s => return .error s
-        | none => return .ok ()
-      catch
-      | e => return .error (← e.toMessageData.toString)
-    | .error e =>
-      return .error e
+    | .ok _ => doProveCompiledM decl index value
+    | .error e => return .error e
 
 def doProve (decl : Name) (src : String) (index : Nat) (value : Int) : GenSeqExcept Unit := do
   let state ← read
@@ -220,13 +222,12 @@ def doProveBatchM
     (timeout : Option Nat) : CommandElabM (Except String Unit) :=
   withoutModifyingEnv do
     try
+      Lean.ofExcept <| (← doCompileM env src)
       for (index, value) in values do
         match value with
         | some v =>
-          Lean.ofExcept <| (← doProveM env decl src index v)
+          Lean.ofExcept <| (← doProveCompiledM decl index v)
         | none =>
-          if ((← getEnv).find? decl).isNone then
-            Lean.ofExcept <| (← doCompileM env src)
           -- Warning: this will evaluate the sequence to compute the value
           -- (might be expensive)
           match (← liftTermElabM <| deriveTheoremForIndex' decl index default) with
