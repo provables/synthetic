@@ -97,7 +97,7 @@
             sed -e "s/PORT/$port/" -e "s/SUPERVISOR/$supervisor/" \
                 < ${./supervisord.conf.template} > "$config/supervisor.conf"
             supervisord -c "$config/supervisor.conf"
-            echo "$port $config"
+            echo "$port $config/supervisorctl"
           '';
         };
 
