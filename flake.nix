@@ -18,7 +18,7 @@
               "aarch64-darwin" = "sha256-fZ6Y89a9aApKe4LXUUOknT7JSV5hTnT5ZfY4mEAuhe4=";
               "aarch64-linux" = "";
               "x86_64-darwin" = "";
-              "x86_64-linux" = "";
+              "x86_64-linux" = "sha256-M2ntKvJDHlk2f9RzqaGQTAdGrumBwWkCmHc+StF/ZVc=";
             };
           in
           pkgs.stdenv.mkDerivation {
