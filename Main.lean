@@ -225,7 +225,8 @@ def doProveBatchM
         | some v =>
           Lean.ofExcept <| (← doProveM env decl src index v)
         | none =>
-          Lean.ofExcept <| (← doCompileM env src)
+          if ((← getEnv).find? decl).isNone then
+            Lean.ofExcept <| (← doCompileM env src)
           -- Warning: this will evaluate the sequence to compute the value
           -- (might be expensive)
           match (← liftTermElabM <| deriveTheoremForIndex' decl index default) with
@@ -250,9 +251,6 @@ def proveBatch (obj : Json) : GenSeqExcept Json := do
     ("proved", true)
   ]
 
--- TODO: Make a batch command for proving (using [idx,value] via derivetheorem)
---       or deriveTheoremForIndex when value is none
--- TODO: get proving function to use a timeout from the json object
 def Commands : Std.HashMap String (Json → GenSeqExcept Json) := .ofList [
   ("ready", ready),
   ("gen", gen),
