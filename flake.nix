@@ -15,7 +15,7 @@
         genseqBin =
           let
             hashes = {
-              "aarch64-darwin" = "sha256-WkTGlSk0XHG+Tzzg9Xe3SXp71+4hbHUvWQR81Ve3Ym4=";
+              "aarch64-darwin" = "sha256-N6mZ/Gw1oMU09xo07Bcl29jPJZPlCP6OS54jverwiJo=";
               "aarch64-linux" = "";
               "x86_64-darwin" = "";
               "x86_64-linux" = "sha256-b+N2MiY8AIh/Cj+6oNOwBkzCSM4du2roQkjIY7KS4go=";
@@ -79,6 +79,28 @@
           '';
         };
         python = pkgs.python313.withPackages (ps: [ ps.supervisor ps.ipython ]);
+        
+        sGenseq = pkgs.writeShellApplication {
+          name = "sgenseq";
+          runtimeInputs = with pkgs; [
+            python
+            genseq
+            gnused
+          ];
+          text = ''
+            supervisor=$(python -c 'import socket; s=socket.socket(); s.bind(("", 0)); print(s.getsockname()[1]); s.close()')
+            port=$(python -c 'import socket; s=socket.socket(); s.bind(("", 0)); print(s.getsockname()[1]); s.close()')
+            config=$(mktemp -d)
+            printf "#!${pkgs.stdenv.shell}\n${python}/bin/supervisorctl -c %s \"\$@\"" \
+              "$config/supervisor.conf" > "$config/supervisorctl"
+            chmod +x "$config/supervisorctl"
+            sed -e "s/PORT/$port/" -e "s/SUPERVISOR/$supervisor/" \
+                < ${./supervisord.conf.template} > "$config/supervisor.conf"
+            supervisord -c "$config/supervisor.conf"
+            echo "$port $config"
+          '';
+        };
+
         supervisedGenseq = pkgs.writeShellApplication {
           name = "genseq";
           runtimeInputs = with pkgs; [
@@ -151,7 +173,8 @@
                 exit 0
               fi
               config=$(mktemp)
-              sed "s/PORT/$port/" < ${./supervisord.conf.template} > "$config"
+              sed -e "s/PORT/$port/" -e "s/SUPERVISOR/9001/" \
+                < ${./supervisord.conf.template} > "$config"
               supervisord $foreground -c "$config"
               if [[ ( -z "$foreground" ) && ( -n "$wait" ) ]]; then
                 echo -n "Waiting for server to be responsive... "
@@ -166,6 +189,7 @@
         packages = {
           default = supervisedGenseq;
           genseq = supervisedGenseq;
+          sgenseq = sGenseq;
         };
 
         devShell = shell {
@@ -178,7 +202,7 @@
             uv
             findutils
             lsof
-            # supervisedGenseq
+            supervisedGenseq
           ] ++ lib.optional stdenv.isDarwin apple-sdk_14;
         };
       }

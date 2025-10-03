@@ -1,10 +1,10 @@
 [supervisorctl]
-serverurl=http://localhost:9001
+serverurl=http://localhost:SUPERVISOR
 
 [supervisord]
 
 [inet_http_server]
-port = 127.0.0.1:9001
+port = 127.0.0.1:SUPERVISOR
 
 [program:genseq]
 command=genseq -p PORT
