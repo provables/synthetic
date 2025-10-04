@@ -10,7 +10,7 @@ open Lean Elab Term Syntax Cli Synth Command
 open Std Net
 open Qq
 
-def VERSION := "0.3.2"
+def VERSION := "0.3.3"
 
 abbrev Codomains := Std.HashMap String Codomain
 
