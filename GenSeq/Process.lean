@@ -111,7 +111,7 @@ partial def processTerm (term : TSyntax `term) : ProcessM (TSyntax `term) := do
     let t2 ← processTerm b
     setUnsafe
     if a == (← `(term|0)) then
-      `(term| -$t2)
+      `(term|(-$t2))
     else if b == (← `(term|0)) then
       `(term|$t1)
     else
