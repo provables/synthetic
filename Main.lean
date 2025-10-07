@@ -10,7 +10,7 @@ open Lean Elab Term Syntax Cli Synth Command
 open Std Net
 open Qq
 
-def VERSION := "0.3.3"
+def VERSION := "0.3.4"
 
 abbrev Codomains := Std.HashMap String Codomain
 
@@ -219,7 +219,7 @@ def prove (obj : Json) : GenSeqExcept Json := do
 
 def doProveBatchM
     (env : Environment) (decl : Name) (src : String) (values : Array (Nat × Option Int))
-    (timeout : Option Nat) : CommandElabM (Except String Unit) :=
+    (_timeout : Option Nat) : CommandElabM (Except String Unit) :=
   withoutModifyingEnv do
     try
       Lean.ofExcept <| (← doCompileM env src)
