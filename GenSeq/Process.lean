@@ -171,7 +171,7 @@ partial def processTerm (term : TSyntax `term) : ProcessM (TSyntax `term) := do
       `(term|λ($(mkIdent `x) $(mkIdent `y)) ↦ $t1)
     else
       `(term|λ($(mkIdent `_x) $(mkIdent `_y)) ↦ $t1)
-  | `(term|λ(x : ℤ) ↦ $t:term) =>
+  | `(term|λ(x : $_:term) ↦ $t:term) =>
     setSafe
     newFreeVars
     let t1 ← processTerm t
