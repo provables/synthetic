@@ -5,3 +5,4 @@ result
 supervisord.log
 supervisord.pid
 *.pyc
+.DS_Store
