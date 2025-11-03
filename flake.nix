@@ -12,6 +12,44 @@
         shell = shell-utils.myShell.${system};
         lean-toolchain = lean-toolchain-nix.packages.${system}.lean-toolchain-4_20;
 
+      genseqLib =
+        let
+          hashes = {
+            "aarch64-darwin" = "sha256-khuTRc9sDEJBhN4rJJdlUWRj0UA8QLzQeeJmA/RL3dM=";
+            "aarch64-linux" = "";
+            "x86_64-darwin" = "";
+            "x86_64-linux" = "";
+          };
+        in
+        pkgs.stdenv.mkDerivation {
+          __structuredAttrs = true;
+          unsafeDiscardReferences.out = true;
+          name = "genseqlib";
+          nativeBuildInputs = [ pkgs.makeWrapper pkgs.cacert ];
+          outputHashAlgo = "sha256";
+          outputHashMode = "recursive";
+          outputHash = hashes.${system};
+          buildInputs = with pkgs; [
+            lean-toolchain
+            gnutar
+            rsync
+            git
+            curl
+            findutils
+            gzip
+          ];
+          src = ./.;
+          buildPhase = ''
+            mkdir -p $out
+            export HOME=$(mktemp -d)
+            lake exe cache get
+            lake build GenSeq
+            find .lake/build/lib -name \*.trace -delete
+            rsync -a .lake/build/lib $out/
+          '';
+          phases = [ "unpackPhase" "buildPhase" ];
+        };
+
         genseqBin =
           let
             hashes = {
@@ -190,6 +228,7 @@
           default = supervisedGenseq;
           genseq = supervisedGenseq;
           sgenseq = sGenseq;
+          inherit genseqLib;
         };
 
         devShell = shell {
