@@ -15,7 +15,7 @@
       genseqLib =
         let
           hashes = {
-            "aarch64-darwin" = "sha256-khuTRc9sDEJBhN4rJJdlUWRj0UA8QLzQeeJmA/RL3dM=";
+            "aarch64-darwin" = "sha256-3eYsKio5hD/fI7KDOeE00ekbuKzwtI6jV2xYgLtyK5w=";
             "aarch64-linux" = "";
             "x86_64-darwin" = "";
             "x86_64-linux" = "";
@@ -36,6 +36,7 @@
             git
             curl
             findutils
+            gnused
             gzip
           ];
           src = ./.;
@@ -43,9 +44,11 @@
             mkdir -p $out
             export HOME=$(mktemp -d)
             lake exe cache get
+            echo "====== Got cache"
             lake build GenSeq
-            find .lake/build/lib -name \*.trace -delete
-            rsync -a .lake/build/lib $out/
+            echo "====== Built"
+            find .lake/build -name \*.trace -exec sed -i -e 's|'$(pwd)'|/base|g' '{}' \;
+            rsync -a .lake/build/ $out
           '';
           phases = [ "unpackPhase" "buildPhase" ];
         };
