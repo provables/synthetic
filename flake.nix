@@ -52,7 +52,7 @@
             git
           ];
           src = ./.;
-          REV = self.rev or builtins.elemAt (builtins.split "-" self.dirtyRev) 0;
+          REV = self.rev or (builtins.elemAt (builtins.split "-" self.dirtyRev) 0);
           buildPhase = ''
             git init -b main
             git commit --allow-empty -m "Empty commit"
