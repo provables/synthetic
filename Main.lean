@@ -10,7 +10,7 @@ open Lean Elab Term Syntax Cli Synth Command
 open Std Net
 open Qq
 
-def VERSION := "0.3.4"
+def VERSION := "0.3.5"
 
 abbrev Codomains := Std.HashMap String Codomain
 
@@ -145,13 +145,7 @@ def toIO {α : Type}
 
 def doCompile (src : String) : GenSeqExcept Unit := do
   let state ← read
-  let x : IO (Except String Unit) := try
-    withTimeout 5000 <| toIO (doCompileM state.env src) state false
-  catch
-    | .userError "Timeout" =>
-      return Except.error "Compilation timed out"
-    | e => throw e
-  ExceptT.mk x
+  ExceptT.mk <| toIO (doCompileM state.env src) state false
 
 -- run_cmd do
 --   dbg_trace "foo"
