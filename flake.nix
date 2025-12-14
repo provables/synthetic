@@ -30,7 +30,7 @@
             "aarch64-darwin" = "sha256-d+ywWpS2Im+c6OOdV7x75sGuBgidJ9OB4ku6bUEznXQ=";
             "aarch64-linux" = "";
             "x86_64-darwin" = "";
-            "x86_64-linux" = "sha256-UAuXuwN5JBDhpIAHbEtM5cfQQ/x8Owa9MPfXNeMOiak=";
+            "x86_64-linux" = "";
           };
         in
         pkgs.stdenv.mkDerivation {
@@ -120,7 +120,7 @@
               "aarch64-darwin" = "sha256-6lhuovPB2nFTfZXXKtlJXqlA2IJQAdCq/AYG5zQaKlM=";
               "aarch64-linux" = "";
               "x86_64-darwin" = "";
-              "x86_64-linux" = "";
+              "x86_64-linux" = "sha256-UAuXuwN5JBDhpIAHbEtM5cfQQ/x8Owa9MPfXNeMOiak=";
             };
           in
           pkgs.stdenv.mkDerivation {
