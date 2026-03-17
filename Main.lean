@@ -246,12 +246,39 @@ def proveBatch (obj : Json) : GenSeqExcept Json := do
     ("proved", true)
   ]
 
+def doCompileMultiM (env : Environment) (src : String) : Command.CommandElabM (Except String Unit) :=
+  do
+    let v ← Parser.testParseModule env "<input>" src
+    let cursor := Syntax.Traverser.fromSyntax v
+    let mut commands := cursor.down 1 |>.down 0
+    while true do
+      elabCommand commands.cur
+      let messages := (← get).messages
+      if messages.hasErrors then
+        return .error <| String.intercalate "\n" (← messages.toList.mapM (·.toString))
+      commands := commands.right
+      if commands.cur.isMissing then
+        break
+    return .ok ()
+
+def doCompileMulti (src : String) : GenSeqExcept Unit := do
+  let state ← read
+  ExceptT.mk <| toIO (doCompileMultiM state.env src) state false
+
+def compileMulti (obj : Json) : GenSeqExcept Json := do
+  let src ← obj.getObjValAs? String "src" |>.mapError (s!"missing src: {·}")
+  doCompileMulti src
+  return Json.mkObj [
+    ("compiled", true)
+  ]
+
 def Commands : Std.HashMap String (Json → GenSeqExcept Json) := .ofList [
   ("ready", ready),
   ("gen", gen),
   ("sum", sum),
   ("eval", eval),
   ("compile", compile),
+  ("compile_multi", compileMulti),
   ("prove", prove),
   ("prove_batch", proveBatch)
 ]
