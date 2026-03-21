@@ -10,7 +10,7 @@ open Lean Elab Term Syntax Cli Synth Command
 open Std Net
 open Qq
 
-def VERSION := "0.3.6"
+def VERSION := "0.3.7"
 
 abbrev Codomains := Std.HashMap String Codomain
 
@@ -272,11 +272,37 @@ def compileMulti (obj : Json) : GenSeqExcept Json := do
     ("compiled", true)
   ]
 
+def checkFunctionMultiM (env : Environment) (cod : Codomain) (s tag : String) (values : Array (Int × Int)) :
+    Command.CommandElabM (Except String Bool) := withoutModifyingEnv do
+  let c ← doCompileMultiM env s
+  match c with
+  | .ok _ =>
+     return .ok <| ← Command.liftTermElabM (checkValuesFor cod tag.toName values)
+  | .error e => return .error e
+
+def checkFunctionMulti (s tag : String) (values : Array (Int × Int)) : GenSeqExcept Bool := do
+  let state ← read
+  let env := state.env
+  let some cod := state.codomains.get? tag | Except.error s!"Codomain for sequence {tag} not found"
+  ExceptT.mk <| Prod.fst <$> (Core.CoreM.toIO · state.ctx state.state) do
+    liftCommandElabM (checkFunctionMultiM env cod s tag values)
+
+def eval_multi (obj : Json) : GenSeqExcept Json := do
+  let src ← obj.getObjValAs? String "src" |>.mapError (s!"missing src: {·}")
+  let values ← obj.getObjValAs? (Array (Int × Int)) "values" |>.mapError (s!"missing values: {·}")
+  let tag ← obj.getObjValAs? String "tag" |>.mapError (s!"missing tag: {·}")
+  let result ← checkFunctionMulti src tag values
+  dbg_trace s!"Got result {result}"
+  return Json.mkObj [
+    ("eval_multi", result)
+  ]
+
 def Commands : Std.HashMap String (Json → GenSeqExcept Json) := .ofList [
   ("ready", ready),
   ("gen", gen),
   ("sum", sum),
   ("eval", eval),
+  ("eval_multi", eval_multi),
   ("compile", compile),
   ("compile_multi", compileMulti),
   ("prove", prove),
