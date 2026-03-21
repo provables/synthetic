@@ -117,10 +117,10 @@
         genseqBin =
           let
             hashes = {
-              "aarch64-darwin" = "sha256-GvfQqnUZ7iMOpzGs/eA7ZN9gnypiWgxftIzYYgUTFk4=";
+              "aarch64-darwin" = "";
               "aarch64-linux" = "";
               "x86_64-darwin" = "";
-              "x86_64-linux" = "sha256-9rRHOelNQpOFVgFPmXVBzsgagm/mH4qVkEKItKI2Vtw=";
+              "x86_64-linux" = "";
             };
           in
           pkgs.stdenv.mkDerivation {
