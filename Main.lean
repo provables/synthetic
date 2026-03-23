@@ -284,8 +284,8 @@ def checkFunctionMulti (s tag : String) (values : Array (Int × Int)) : GenSeqEx
   let state ← read
   let env := state.env
   let some cod := state.codomains.get? tag | Except.error s!"Codomain for sequence {tag} not found"
-  ExceptT.mk <| Prod.fst <$> (Core.CoreM.toIO · state.ctx state.state) do
-    liftCommandElabM (checkFunctionMultiM env cod s tag values)
+  let c := liftCommandElabM (throwOnError := false) (checkFunctionMultiM env cod s tag values)
+  ExceptT.mk <| Prod.fst <$> (Core.CoreM.toIO · state.ctx state.state) c
 
 def eval_multi (obj : Json) : GenSeqExcept Json := do
   let src ← obj.getObjValAs? String "src" |>.mapError (s!"missing src: {·}")
