@@ -321,6 +321,10 @@ def fixOffset (env : Environment) (src tag : String) (offset : Int) :
   let m ← Parser.testParseModule env "<input>" src
   if offset == 0 then return m
   let newName := s!"_{tag}".toName
+  let newDecl ←
+      `(declaration|
+        def $(mkIdent tag.toName):ident ($(mkIdent `n) : $(mkIdent `Nat)) : $(mkIdent `Nat ) :=
+          $(mkIdent newName) ($(mkIdent `n) - $(mkNatLit offset.toNat)))
   let cursor := Syntax.Traverser.fromSyntax m
   let mut commands := cursor.down 1 |>.down 0
   while true do
@@ -333,14 +337,7 @@ def fixOffset (env : Environment) (src tag : String) (offset : Int) :
     commands := commands.right
     if commands.cur.isMissing then
       break
-  let m := commands.up.up.cur
-  let some mArgs := m.getArgs[1]? | throwError "module should have an argument"
-  let newDef := mArgs.getArgs.push (←
-    `(declaration|
-        def $(mkIdent tag.toName):ident ($(mkIdent `n) : $(mkIdent `Nat)) : $(mkIdent `Nat ) :=
-          $(mkIdent newName) ($(mkIdent `n) - $(mkNatLit offset.toNat))))
-  let newMod := m.setArg 1 <| mArgs.setArgs newDef
-  return ⟨newMod⟩
+  return ⟨commands.up.up.cur.modifyArg 1 (·.modifyArgs (·.push newDecl))⟩
 
 -- run_cmd do
 --   let env ← getEnv
