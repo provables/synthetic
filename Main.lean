@@ -66,6 +66,12 @@ def sum (obj : Json) : GenSeqExcept Json := do
     ("x + y", x + y)
   ]
 
+def evalDecl (cod : Codomain) (decl : Name) (index : Int) : TermElabM cod := do
+  let e ← instantiateMVars (← Term.elabTerm (← `(term|$(mkIdent decl):ident $(quote index.toNat)))
+      (some (mkConst cod [])))
+  Term.synthesizeSyntheticMVarsNoPostponing
+  unsafe Meta.evalExpr cod (mkConst cod []) e
+
 def checkValuesFor (cod : Codomain) (decl : Name) (values : Array (Int × Int)) : TermElabM Bool := do
   for (idx, val) in values do
     let e ← instantiateMVars (← Term.elabTerm (← `(term|$(mkIdent decl):ident $(quote idx.toNat)))
@@ -297,6 +303,92 @@ def eval_multi (obj : Json) : GenSeqExcept Json := do
     ("eval_multi", result)
   ]
 
+  def codToInt {c : Codomain} (x : ↑c) : Int :=
+    match c with
+      | Codomain.Nat => x
+      | Codomain.Int => x
+
+-- def t := "
+-- def fooo (n : Nat) : Nat := n + 1
+
+-- def A000001 (n : Nat) : Nat := fooo n
+-- "
+
+open Lean.Parser.Command
+
+def fixOffset (env : Environment) (src tag : String) (offset : Int) :
+    Command.CommandElabM (TSyntax `Lean.Parser.Module.module) := do
+  let m ← Parser.testParseModule env "<input>" src
+  if offset == 0 then return m
+  let newName := s!"_{tag}".toName
+  let cursor := Syntax.Traverser.fromSyntax m
+  let mut commands := cursor.down 1 |>.down 0
+  while true do
+    if commands.cur.isOfKind `Lean.Parser.Command.declaration then
+      let d := commands.down 1 |>.down 1
+      let dName := (d.cur.getArg 0).getId
+      if dName == tag.toName then
+        let newD := d.setCur (← `(declId|$(mkIdent newName)))
+        commands := newD.up.up
+    commands := commands.right
+    if commands.cur.isMissing then
+      break
+  let newMod := commands.up.up.cur
+  let newModArgs := newMod.getArgs[1]!
+  let u := newModArgs.getArgs.push (←
+    `(declaration|def $(mkIdent tag.toName):ident ($(mkIdent `n) : $(mkIdent `Nat)) : $(mkIdent `Nat ) := $(mkIdent newName) ($(mkIdent `n) - $(mkNatLit offset.toNat))))
+  let newModArgs := newModArgs.setArgs u
+  let newMod := newMod.setArg 1 newModArgs
+  return ⟨newMod⟩
+
+-- run_cmd do
+--   let env ← getEnv
+--   let x : TSyntax `Lean.Parser.Module.module  ← fixOffset env t "A000001" 1
+--   let (u, _) ← Core.CoreM.toIO (PrettyPrinter.ppModule x) {fileName := "", fileMap := default} {env}
+--   dbg_trace u
+
+def doDetectOffsetM (env : Environment) (cod : Codomain) (src tag : String) (values : Array (Int × Int)) :
+    Command.CommandElabM (Except String (Bool × Int)) := withoutModifyingEnv do
+  match (← doCompileMultiM env src) with
+  | .ok _ =>
+    let some (index, value) := values[0]? | return .ok (false, 0)
+    let seqValue := codToInt <| ← Command.liftTermElabM (evalDecl cod tag.toName index)
+    if seqValue == value then
+      return .ok (false, 0)
+    let some (foundIndex, _) := values.find? (fun (_, val) => val == seqValue) | return .ok (false, 0)
+    dbg_trace "found new index := {foundIndex}"
+    return .ok (true, foundIndex)
+  | .error e => return .error e
+
+def doDetectOffset (src tag : String) (values : Array (Int × Int)) : GenSeqExcept (Bool × String) := do
+  let state ← read
+  let env := state.env
+  let some cod := state.codomains.get? tag | Except.error s!"Codomain for sequence {tag} not found"
+  let r := liftCommandElabM (throwOnError := false) (do
+    let x ← doDetectOffsetM env cod src tag values
+    match x with
+    | .ok (changed, offset) =>
+      if changed then
+        let newSrc ← fixOffset env src tag offset
+        let (m, _) ← Core.CoreM.toIO (PrettyPrinter.ppModule newSrc) {fileName := "", fileMap := default} {env}
+        return .ok (changed, s!"{m}")
+      else
+        return .ok (changed, src)
+    | .error e => return .error e
+  )
+  ExceptT.mk <| Prod.fst <$> (Core.CoreM.toIO · state.ctx state.state) r
+
+def detectOffset (obj : Json) : GenSeqExcept Json := do
+  let src ← obj.getObjValAs? String "src" |>.mapError (s!"missing src: {·}")
+  let values ← obj.getObjValAs? (Array (Int × Int)) "values" |>.mapError (s!"missing values: {·}")
+  let tag ← obj.getObjValAs? String "tag" |>.mapError (s!"missing tag: {·}")
+  let (changed, new_src) ← doDetectOffset src tag values
+  return Json.mkObj [
+    ("offset_changed", changed),
+    ("src", new_src)
+  ]
+
+
 def Commands : Std.HashMap String (Json → GenSeqExcept Json) := .ofList [
   ("ready", ready),
   ("gen", gen),
@@ -306,7 +398,8 @@ def Commands : Std.HashMap String (Json → GenSeqExcept Json) := .ofList [
   ("compile", compile),
   ("compile_multi", compileMulti),
   ("prove", prove),
-  ("prove_batch", proveBatch)
+  ("prove_batch", proveBatch),
+  ("detect_offset", detectOffset)
 ]
 
 def errorToJson (e : String) : Json := Json.mkObj [("status", false), ("error", e)]
