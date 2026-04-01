@@ -333,12 +333,13 @@ def fixOffset (env : Environment) (src tag : String) (offset : Int) :
     commands := commands.right
     if commands.cur.isMissing then
       break
-  let newMod := commands.up.up.cur
-  let newModArgs := newMod.getArgs[1]!
-  let u := newModArgs.getArgs.push (←
-    `(declaration|def $(mkIdent tag.toName):ident ($(mkIdent `n) : $(mkIdent `Nat)) : $(mkIdent `Nat ) := $(mkIdent newName) ($(mkIdent `n) - $(mkNatLit offset.toNat))))
-  let newModArgs := newModArgs.setArgs u
-  let newMod := newMod.setArg 1 newModArgs
+  let m := commands.up.up.cur
+  let some mArgs := m.getArgs[1]? | throwError "module should have an argument"
+  let newDef := mArgs.getArgs.push (←
+    `(declaration|
+        def $(mkIdent tag.toName):ident ($(mkIdent `n) : $(mkIdent `Nat)) : $(mkIdent `Nat ) :=
+          $(mkIdent newName) ($(mkIdent `n) - $(mkNatLit offset.toNat))))
+  let newMod := m.setArg 1 <| mArgs.setArgs newDef
   return ⟨newMod⟩
 
 -- run_cmd do
