@@ -303,16 +303,11 @@ def eval_multi (obj : Json) : GenSeqExcept Json := do
     ("eval_multi", result)
   ]
 
-  def codToInt {c : Codomain} (x : ↑c) : Int :=
+instance {c : Codomain} : CoeOut ↑c Int where
+  coe x :=
     match c with
-      | Codomain.Nat => x
-      | Codomain.Int => x
-
--- def t := "
--- def fooo (n : Nat) : Nat := n + 1
-
--- def A000001 (n : Nat) : Nat := fooo n
--- "
+    | Codomain.Nat => x
+    | Codomain.Int => x
 
 open Lean.Parser.Command
 
@@ -339,18 +334,12 @@ def fixOffset (env : Environment) (src tag : String) (offset : Int) :
       break
   return ⟨commands.up.up.cur.modifyArg 1 (·.modifyArgs (·.push newDecl))⟩
 
--- run_cmd do
---   let env ← getEnv
---   let x : TSyntax `Lean.Parser.Module.module  ← fixOffset env t "A000001" 1
---   let (u, _) ← Core.CoreM.toIO (PrettyPrinter.ppModule x) {fileName := "", fileMap := default} {env}
---   dbg_trace u
-
 def doDetectOffsetM (env : Environment) (cod : Codomain) (src tag : String) (values : Array (Int × Int)) :
     Command.CommandElabM (Except String (Bool × Int)) := withoutModifyingEnv do
   match (← doCompileMultiM env src) with
   | .ok _ =>
     let some (index, value) := values[0]? | return .ok (false, 0)
-    let seqValue := codToInt <| ← Command.liftTermElabM (evalDecl cod tag.toName index)
+    let seqValue : Int ← Command.liftTermElabM (evalDecl cod tag.toName index)
     if seqValue == value then
       return .ok (false, 0)
     let some (foundIndex, _) := values.find? (fun (_, val) => val == seqValue) | return .ok (false, 0)
