@@ -375,6 +375,37 @@ def detectOffset (obj : Json) : GenSeqExcept Json := do
     ("src", new_src)
   ]
 
+def doDetectLookupM (env : Environment) (src : String) (values : Array Int) (threshold : Int) :
+    CommandElabM (Except String Bool) := do
+  let m ← Parser.testParseModule env "<input>" src
+  let valuesSet := Std.HashSet.ofArray values
+  let mut constants : Std.HashSet Int := ∅
+  for v in m.raw.topDown do
+    constants := match v with
+    | `(term|$n:num) =>
+      constants.insert n.getNat
+    | `(term| -$n:num) =>
+      constants.insert (-n.getNat)
+    | _ => constants
+  return .ok <| threshold <= (constants.filter valuesSet.contains |>.size)
+
+def doDetectLookup (src : String) (values : Array (Int × Int)) (threshold : Int) :
+    GenSeqExcept Bool := do
+  let state ← read
+  let env := state.env
+  let vs := values.map (·.snd)
+  let r := liftCommandElabM (throwOnError := false) <| doDetectLookupM env src vs threshold
+  ExceptT.mk <| Prod.fst <$> (Core.CoreM.toIO · state.ctx state.state) r
+
+def detectLookup (obj : Json) : GenSeqExcept Json := do
+  let src ← obj.getObjValAs? String "src" |>.mapError (s!"missing src: {·}")
+  let values ← obj.getObjValAs? (Array (Int × Int)) "values" |>.mapError (s!"missing values: {·}")
+  let threshold ← obj.getObjValAs? Int "threshold" |>.mapError (s!"missing threshold: {·}")
+  let isLookup ← doDetectLookup src values threshold
+  return Json.mkObj [
+    ("detect_lookup", isLookup),
+  ]
+
 def Commands : Std.HashMap String (Json → GenSeqExcept Json) := .ofList [
   ("ready", ready),
   ("gen", gen),
@@ -385,7 +416,8 @@ def Commands : Std.HashMap String (Json → GenSeqExcept Json) := .ofList [
   ("compile_multi", compileMulti),
   ("prove", prove),
   ("prove_batch", proveBatch),
-  ("detect_offset", detectOffset)
+  ("detect_offset", detectOffset),
+  ("detect_lookup", detectLookup)
 ]
 
 def errorToJson (e : String) : Json := Json.mkObj [("status", false), ("error", e)]
