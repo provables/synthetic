@@ -354,7 +354,6 @@ def doDetectOffsetM (env : Environment) (cod : Codomain) (src tag : String) (val
     if seqValue == value then
       return .ok (false, 0)
     let some (foundIndex, _) := values.find? (fun (_, val) => val == seqValue) | return .ok (false, 0)
-    dbg_trace "found new index := {foundIndex}"
     return .ok (true, foundIndex)
   | .error e => return .error e
 
@@ -362,19 +361,20 @@ def doDetectOffset (src tag : String) (values : Array (Int × Int)) : GenSeqExce
   let state ← read
   let env := state.env
   let some cod := state.codomains.get? tag | Except.error s!"Codomain for sequence {tag} not found"
-  let r := liftCommandElabM (throwOnError := false) (do
-    let x ← doDetectOffsetM env cod src tag values
-    match x with
-    | .ok (changed, offset) =>
-      if changed then
+  let s := liftCommandElabM (throwOnError := false) (do
+    match (← doDetectOffsetM env cod src tag values) with
+    | .ok (false, _) => return Except.ok none
+    | .ok (true, offset) =>
         let newSrc ← fixOffset env src tag offset
-        let (m, _) ← Core.CoreM.toIO (PrettyPrinter.ppModule newSrc) {fileName := "", fileMap := default} {env}
-        return .ok (changed, s!"{m}")
-      else
-        return .ok (changed, src)
+        return .ok <| some newSrc
     | .error e => return .error e
   )
-  ExceptT.mk <| Prod.fst <$> (Core.CoreM.toIO · state.ctx state.state) r
+  ExceptT.mk <| Prod.fst <$> (Core.CoreM.toIO · state.ctx state.state) (do
+    match (← s) with
+    | .ok none => return .ok (false, src)
+    | .ok (some v) => return .ok (true, s!"{← PrettyPrinter.ppModule v}")
+    | .error e => return .error e
+  )
 
 def detectOffset (obj : Json) : GenSeqExcept Json := do
   let src ← obj.getObjValAs? String "src" |>.mapError (s!"missing src: {·}")
@@ -385,7 +385,6 @@ def detectOffset (obj : Json) : GenSeqExcept Json := do
     ("offset_changed", changed),
     ("src", new_src)
   ]
-
 
 def Commands : Std.HashMap String (Json → GenSeqExcept Json) := .ofList [
   ("ready", ready),
