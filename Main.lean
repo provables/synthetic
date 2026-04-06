@@ -386,7 +386,10 @@ def detectOffset (obj : Json) : GenSeqExcept Json := do
 
 def doDetectLookupM (env : Environment) (src : String) (values : Array Int) (threshold : Int) :
     CommandElabM (Except String Bool) := do
-  let m ← Parser.testParseModule env "<input>" src
+  let m ← try
+    Parser.testParseModule env "<input>" src
+  catch e =>
+    return .error <| ← e.toMessageData.toString
   let valuesSet := Std.HashSet.ofArray values
   let mut constants : Std.HashSet Int := ∅
   for v in m.raw.topDown do
