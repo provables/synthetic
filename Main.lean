@@ -73,10 +73,10 @@ def evalDecl (cod : Codomain) (decl : Name) (index : Int) : TermElabM (Except St
     return .error s!"{← e.toMessageData.toString}"
   where
     _evalDecl (cod : Codomain) (decl : Name) (index : Int) : TermElabM cod := do
-  let e ← instantiateMVars (← Term.elabTerm (← `(term|$(mkIdent decl):ident $(quote index.toNat)))
-      (some (mkConst cod [])))
-  Term.synthesizeSyntheticMVarsNoPostponing
-  unsafe Meta.evalExpr cod (mkConst cod []) e
+      let e ← instantiateMVars (← Term.elabTerm (← `(term|$(mkIdent decl):ident $(quote index.toNat)))
+          (some (mkConst cod [])))
+      Term.synthesizeSyntheticMVarsNoPostponing
+      unsafe Meta.evalExpr cod (mkConst cod []) e
 
 def checkValuesFor (cod : Codomain) (decl : Name) (values : Array (Int × Int)) : TermElabM Bool := do
   for (idx, val) in values do
