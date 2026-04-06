@@ -66,7 +66,13 @@ def sum (obj : Json) : GenSeqExcept Json := do
     ("x + y", x + y)
   ]
 
-def evalDecl (cod : Codomain) (decl : Name) (index : Int) : TermElabM cod := do
+def evalDecl (cod : Codomain) (decl : Name) (index : Int) : TermElabM (Except String cod) := do
+  withoutModifyingState $ try
+    return .ok $ (← _evalDecl cod decl index)
+  catch e =>
+    return .error s!"{← e.toMessageData.toString}"
+  where
+    _evalDecl (cod : Codomain) (decl : Name) (index : Int) : TermElabM cod := do
   let e ← instantiateMVars (← Term.elabTerm (← `(term|$(mkIdent decl):ident $(quote index.toNat)))
       (some (mkConst cod [])))
   Term.synthesizeSyntheticMVarsNoPostponing
@@ -339,7 +345,10 @@ def doDetectOffsetM (env : Environment) (cod : Codomain) (src tag : String) (val
   match (← doCompileMultiM env src) with
   | .ok _ =>
     let some (index, value) := values[0]? | return .ok (false, 0)
-    let seqValue : Int ← Command.liftTermElabM (evalDecl cod tag.toName index)
+    let seqValue? ← Command.liftTermElabM (evalDecl cod tag.toName index)
+    let seqValue ← match seqValue? with
+    | .ok v => pure v
+    | .error e => return .error e
     if seqValue == value then
       return .ok (false, 0)
     let some (foundIndex, _) := values.find? (fun (_, val) => val == seqValue) | return .ok (false, 0)
