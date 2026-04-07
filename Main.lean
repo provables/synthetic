@@ -260,7 +260,10 @@ def proveBatch (obj : Json) : GenSeqExcept Json := do
 
 def doCompileMultiM (env : Environment) (src : String) : Command.CommandElabM (Except String Unit) :=
   do
-    let v ← Parser.testParseModule env "<input>" src
+    let v ← try
+      Parser.testParseModule env "<input>" src
+    catch e =>
+      return .error <| ← e.toMessageData.toString
     let cursor := Syntax.Traverser.fromSyntax v
     let mut commands := cursor.down 1 |>.down 0
     while true do
