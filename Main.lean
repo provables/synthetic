@@ -5,12 +5,13 @@ import Std.Internal.UV.TCP
 import Sequencelib.Meta.Synthetic
 import Sequencelib.Meta.Codomain
 import Sequencelib.Meta.DeriveTheorems
+import GenSeq.RepairFunctions
 
 open Lean Elab Term Syntax Cli Synth Command
 open Std Net
 open Qq
 
-def VERSION := "0.3.9"
+def VERSION := "0.3.10"
 
 abbrev Codomains := Std.HashMap String Codomain
 
@@ -421,6 +422,40 @@ def detectLookup (obj : Json) : GenSeqExcept Json := do
     ("detect_lookup", isLookup),
   ]
 
+def doRepairM (env : Environment) (src : String) (_maxAttempts : Nat) :
+    CommandElabM <| Except String (String × Bool × Nat × String) := do
+  let m ← try
+    Parser.testParseModule env "<input>" src
+  catch e =>
+    return .error <| ← e.toMessageData.toString
+  let (newSrcStx, numRepairs) ← repairIdentifiers m
+  let newSrc := s!"{← liftCoreM <| PrettyPrinter.ppModule ⟨newSrcStx⟩}"
+  let c ← doCompileMultiM env newSrc
+  match c with
+  | .ok _ =>
+    return .ok (newSrc, true, numRepairs, "")
+  | .error e =>
+    return .ok (newSrc, false, numRepairs, e)
+
+def doRepair (src : String) (maxAttempts : Nat) :
+    GenSeqExcept (String × Bool × Nat × String) := do
+  let state ← read
+  let env := state.env
+  let r := liftCommandElabM (throwOnError := false) <| doRepairM env src maxAttempts
+  ExceptT.mk <| Prod.fst <$> (Core.CoreM.toIO · state.ctx state.state) r
+
+def repair (obj : Json) : GenSeqExcept Json := do
+  let src ← obj.getObjValAs? String "src" |>.mapError (s!"missing src: {·}")
+  --let maxAttempts ← obj.getObjValAs? Nat "max_attempts" |>.mapError (s!"missing max_attempts: {·}")
+  let maxAttempts := 1
+  let (src, compiled, numRepairs, error) ← doRepair src maxAttempts
+  return Json.mkObj [
+    ("src", src),
+    ("compiled", compiled),
+    ("numRepairs", numRepairs),
+    ("error", error)
+  ]
+
 def Commands : Std.HashMap String (Json → GenSeqExcept Json) := .ofList [
   ("ready", ready),
   ("gen", gen),
@@ -432,7 +467,8 @@ def Commands : Std.HashMap String (Json → GenSeqExcept Json) := .ofList [
   ("prove", prove),
   ("prove_batch", proveBatch),
   ("detect_offset", detectOffset),
-  ("detect_lookup", detectLookup)
+  ("detect_lookup", detectLookup),
+  ("compile_and_repair", repair)
 ]
 
 def errorToJson (e : String) : Json := Json.mkObj [("status", false), ("error", e)]
