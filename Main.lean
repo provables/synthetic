@@ -11,7 +11,7 @@ open Lean Elab Term Syntax Cli Synth Command
 open Std Net
 open Qq
 
-def VERSION := "0.3.10"
+def VERSION := "0.3.11"
 
 abbrev Codomains := Std.HashMap String Codomain
 
@@ -564,7 +564,7 @@ def process_client (socket : Internal.UV.TCP.Socket) : GenSeqState UInt32 := do
           let remaining := u.extract (i + 1) u.size
           match String.fromUTF8? data_received with
           | some text =>
-            IO.println s!"got data: {text.trimRight}"
+            IO.println s!"got data: {text.trimAsciiEnd}"
             let output ← process_data text
             match (← socket.send <| #[String.toUTF8 output]).result!.get with
             | .ok _ => return (none, remaining)
@@ -650,7 +650,7 @@ def codomains_from_var (var : String) : CodM Codomains := do
 
 unsafe
 def run (p : Parsed) : IO UInt32 := do
-  let modules := #[`GenSeq, `Mathlib, `Sequencelib.Meta]
+  let modules := #[`GenSeq, `Mathlib, `Sequencelib.Meta, `Sequencelib.Meta.OEISTacticHeavy]
   enableInitializersExecution
   initSearchPath (← findSysroot)
   let env ← importModules (modules.map ({module := ·})) {} (trustLevel := 1024) (loadExts := true)
