@@ -120,7 +120,7 @@
               "aarch64-darwin" = "sha256-2FYuNzCXw874HvdVZ2w6WaAiSs1Jlc7Z516cuqg2PMI=";
               "aarch64-linux" = "";
               "x86_64-darwin" = "";
-              "x86_64-linux" = "sha256-wjJW53q0HQ1OC5oHEp8gaEFX3fQ6ey2MThM9JKSnlZE=";
+              "x86_64-linux" = "sha256-JqILThXmd4nApW3jctABv/+YTh+EohGf4rdGooDs/U4=";
             };
           in
           pkgs.stdenv.mkDerivation {
@@ -154,7 +154,7 @@
               cp .lake/build/bin/genseq $out/bin/genseq
               rsync -a .lake/build/lib/lean $out/lib/
               rsync -a .lake/packages/ $out/lib/packages/
-              find $out/lib -type f ! -name "*.olean" -delete
+              find $out/lib -type f !  \( -name "*.olean" -o -name "*.olean.private" \) -delete
               find $out/lib -depth -type d -empty -delete
             '';
             dontFixup = true;
