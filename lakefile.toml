@@ -10,22 +10,23 @@ autoImplicit = false
 [[require]]
 name = "mathlib"
 scope = "leanprover-community"
-rev = "v4.20.1"
+rev = "v4.27.0"
 
 [[require]]
 name = "Cli"
 git = "https://github.com/leanprover/lean4-cli.git"
-rev = "v4.20.0"
+rev = "v4.27.0"
 
 [[require]]
 name = "«doc-gen4»"
 git = "https://github.com/leanprover/doc-gen4"
-rev = "v4.20.1"
+rev = "v4.27.0"
 
 [[require]]
 name = "sequencelib"
-git = "https://github.com/provables/sequencelib.git"
-rev = "b201fca66aed7826cf80debcbb7ebfb1d007f191"
+# git = "https://github.com/provables/sequencelib.git"
+# rev = "b201fca66aed7826cf80debcbb7ebfb1d007f191"
+path = "/home/jstubbs/gits/lean4/sequencelib-aiprover"
 
 [[lean_lib]]
 name = "GenSeq"

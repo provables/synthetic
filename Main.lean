@@ -203,6 +203,19 @@ def doProveCompiledM (decl : Name) (index : Nat) (value : Int) :
   catch
   | e => return .error (← e.toMessageData.toString)
 
+def doProveCompiledTacticM (decl : Name) (index : Nat) (value : Int) (tactic: String) :
+    CommandElabM (Except String Unit) := do
+  try
+    let cod ← codomainOfDecl decl
+    let valueCod := intToCod value
+    let result ← liftTermElabM <| deriveTheoremWithTactic (c := cod) decl index valueCod default tactic
+    match result with
+    | some s => return .error s
+    | none => return .ok ()
+  catch
+  | e => return .error (← e.toMessageData.toString)
+
+
 def doProveM (env : Environment) (decl : Name) (src : String) (index : Nat) (value : Int) :
     CommandElabM (Except String Unit) :=
   withoutModifyingEnv do
@@ -258,6 +271,45 @@ def proveBatch (obj : Json) : GenSeqExcept Json := do
   return Json.mkObj [
     ("proved", true)
   ]
+
+def doProveBatchTacticM
+    (env : Environment) (decl : Name) (src : String) (values : Array (Nat × Option Int))
+    (tactic: String) (_timeout : Option Nat) : CommandElabM (Except String Unit) :=
+  withoutModifyingEnv do
+    try
+      Lean.ofExcept <| (← doCompileM env src)
+      for (index, value) in values do
+        match value with
+        | some v =>
+          Lean.ofExcept <| (← doProveCompiledTacticM decl index v tactic)
+        | none =>
+          -- Warning: this will evaluate the sequence to compute the value
+          -- (might be expensive)
+          match (← liftTermElabM <| deriveTheoremForIndex' decl index default) with
+          | some e => return .error e
+          | none => pure ()
+      catch
+      | e => return .error (← e.toMessageData.toString)
+    return .ok ()
+
+
+def doProveBatchTactic (decl : Name) (src : String) (values : Array (Nat × Option Int))
+  (tactic: String) (timeout : Option Nat) : GenSeqExcept Unit := do
+  let state ← read
+  ExceptT.mk <| toIO (doProveBatchTacticM state.env decl src values tactic timeout) state false
+
+
+def proveBatchWithTactic (obj : Json) : GenSeqExcept Json := do
+  let src ← obj.getObjValAs? String "src" |>.mapError (s!"missing src: {·}")
+  let name ← obj.getObjValAs? String "name" |>.mapError (s!"missing name: {·}")
+  let values ← obj.getObjValAs? (Array (Nat × Option Int)) "values" |>.mapError (s!"missing values: {·}")
+  let tactic ← obj.getObjValAs? String "tactic" |>.mapError (s!"missing tactic: {·}")
+  let timeout := obj.getObjValAs? Nat "timeout" |>.toOption
+  doProveBatchTactic (.mkSimple name) src values tactic timeout
+  return Json.mkObj [
+    ("proved", true)
+  ]
+
 
 def doCompileMultiM (env : Environment) (src : String) : Command.CommandElabM (Except String Unit) :=
   do
@@ -466,6 +518,7 @@ def Commands : Std.HashMap String (Json → GenSeqExcept Json) := .ofList [
   ("compile_multi", compileMulti),
   ("prove", prove),
   ("prove_batch", proveBatch),
+  ("prove_batch_with_tactic", proveBatchWithTactic),
   ("detect_offset", detectOffset),
   ("detect_lookup", detectLookup),
   ("compile_and_repair", repair)
@@ -513,7 +566,7 @@ def process_client (socket : Internal.UV.TCP.Socket) : GenSeqState UInt32 := do
           | some text =>
             IO.println s!"got data: {text.trimRight}"
             let output ← process_data text
-            match (← socket.send <| String.toUTF8 output).result!.get with
+            match (← socket.send <| #[String.toUTF8 output]).result!.get with
             | .ok _ => return (none, remaining)
             | .error e =>
               IO.println s!"got error while writing: {e}"
@@ -530,13 +583,13 @@ def process_client (socket : Internal.UV.TCP.Socket) : GenSeqState UInt32 := do
     ) |>.get
     data := remaining
     if let some x := e then
-      return x
+      return x.toUInt32
   return 0
 
 def run_server (port : Nat) : GenSeqState UInt32 := do
   let socket ← Internal.UV.TCP.Socket.new
   let addr := IPv4Addr.ofString "0.0.0.0" |>.getD default
-  let endpoint := SocketAddress.v4 {addr := addr, port := port}
+  let endpoint := SocketAddress.v4 {addr := addr, port := port.toUInt16}
   socket.bind endpoint
   socket.listen 1
   IO.println s!"[Genseq v{VERSION}] Ready on port {port}"
@@ -574,7 +627,7 @@ def codomains_json (file : String) : CodM Json := do
 
 def codomains_from_json (cods : Json) : CodM Codomains := do
   let x ← cods.getObj?
-  x.foldM (init := ∅) (fun prev key val => do
+  x.foldlM (init := ∅) (fun prev key val => do
     return Std.HashMap.insert prev key (
       if (← val.getNat?) == 0 then Codomain.Nat else Codomain.Int
     )

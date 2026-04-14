@@ -17,7 +17,7 @@ theorem p_eq_zero_of_pow (n : ℕ) : p (2 ^ n) = 0 := by
       u 0 0 = 0 := by
     intro u
     match u with
-    | .negSucc _ => reduce; rfl
+    | .negSucc _ => unfold loop2; rfl
     | .ofNat u =>
       induction u with
       | zero => reduce; rfl
@@ -32,7 +32,7 @@ theorem p_eq_zero_of_pow (n : ℕ) : p (2 ^ n) = 0 := by
       u 0 (2 ^ m) = 0 := by
     intro m u
     match u with
-    | .negSucc _ => reduce; rfl
+    | .negSucc _ => unfold loop2; rfl
     | .ofNat u =>
       induction u generalizing m with
       | zero => reduce; rfl

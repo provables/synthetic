@@ -270,7 +270,7 @@ def processDef (definition : TSyntax `Lean.Parser.Command.definition) :
 def fixFormatting (s : String) : String :=
   let y := (s.splitOn "\n").flatMap (fun line =>
     if line.startsWith "/-!" then
-      ["/-!", line.drop 3]
+      ["/-!", (line.drop 3).toString]
     else if line.startsWith "@[OEIS" then
       [", ".intercalate
         (line.splitOn "," |>.map (fun word => " := ".intercalate (word.splitOn ":=")))]
@@ -303,7 +303,7 @@ def backupPath (fpath : FilePath) : FilePath :=
 def processStateFromJson (fpath : FilePath) : IO ProcessState := do
   let f ← IO.FS.readFile fpath
   let .ok j := Json.parse f | throw <| IO.Error.mkInvalidArgument 1 "json parse failed"
-  let m : RBMap String Json _ ← IO.ofExcept <| RBMap.fromJson? j (cmp := compare)
+  let m ← IO.ofExcept <| j.getObj?.mapError (fun _ => "json object parse failed")
   let mut seqInfo : Std.HashMap Name SeqInfo := ∅
   for (k, v) in m do
     let w ← IO.ofExcept <| v.getObjValAs? (Array String) "keywords"
