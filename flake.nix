@@ -10,7 +10,7 @@
       let
         pkgs = nixpkgs.legacyPackages.${system};
         shell = shell-utils.myShell.${system};
-        lean-toolchain = lean-toolchain-nix.packages.${system}.lean-toolchain-4_20;
+        lean-toolchain = lean-toolchain-nix.packages.${system}.lean-toolchain-4_27;
 
       fakeGit = pkgs.writeShellApplication {
         name = "git";
@@ -120,7 +120,7 @@
               "aarch64-darwin" = "sha256-2FYuNzCXw874HvdVZ2w6WaAiSs1Jlc7Z516cuqg2PMI=";
               "aarch64-linux" = "";
               "x86_64-darwin" = "";
-              "x86_64-linux" = "sha256-eGx6HELeqXQCJ10+aG3ZlPc/1EUXLi/Y2eesPVzyOlY=";
+              "x86_64-linux" = "sha256-Yl+Wsb2phevs3pqnmJFQgT93B+ZlOMJyReOoW7uZnc8=";
             };
           in
           pkgs.stdenv.mkDerivation {
