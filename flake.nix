@@ -120,7 +120,7 @@
               "aarch64-darwin" = "sha256-2FYuNzCXw874HvdVZ2w6WaAiSs1Jlc7Z516cuqg2PMI=";
               "aarch64-linux" = "";
               "x86_64-darwin" = "";
-              "x86_64-linux" = "sha256-Yl+Wsb2phevs3pqnmJFQgT93B+ZlOMJyReOoW7uZnc8=";
+              "x86_64-linux" = "sha256-wjJW53q0HQ1OC5oHEp8gaEFX3fQ6ey2MThM9JKSnlZE=";
             };
           in
           pkgs.stdenv.mkDerivation {
@@ -149,6 +149,7 @@
               mkdir -p $out/{bin,lib/packages}
               export HOME=$(mktemp -d)
               lake exe cache get
+              lake build Sequencelib.Meta.OEISTacticHeavy
               lake build genseq
               cp .lake/build/bin/genseq $out/bin/genseq
               rsync -a .lake/build/lib/lean $out/lib/
@@ -292,7 +293,7 @@
           default = supervisedGenseq;
           genseq = supervisedGenseq;
           sgenseq = sGenseq;
-          inherit genseqLib genSeqDocs fakeGit;
+          inherit genseqLib genSeqDocs fakeGit genseqBin;
         };
 
         devShell = shell {
