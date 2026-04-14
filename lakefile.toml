@@ -24,9 +24,8 @@ rev = "v4.27.0"
 
 [[require]]
 name = "sequencelib"
-# git = "https://github.com/provables/sequencelib.git"
-# rev = "b201fca66aed7826cf80debcbb7ebfb1d007f191"
-path = "/home/jstubbs/gits/lean4/sequencelib-aiprover"
+git = "https://github.com/provables/sequencelib.git"
+rev = "ailoop"
 
 [[lean_lib]]
 name = "GenSeq"
