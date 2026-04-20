@@ -11,113 +11,113 @@
         pkgs = nixpkgs.legacyPackages.${system};
         shell = shell-utils.myShell.${system};
         lean-toolchain = lean-toolchain-nix.packages.${system}.lean-toolchain-4_27;
-
-      fakeGit = pkgs.writeShellApplication {
-        name = "git";
-        text = ''
-          case "$1" in
-          "remote")
-            echo "git@github.com:provables/synthetic.git" ;;
-          "rev-parse")
-            echo "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" ;;
-          esac
-        '';
-      };
-
-      genSeqDocs =
-        let
-          hashes = {
-            "aarch64-darwin" = "sha256-d+ywWpS2Im+c6OOdV7x75sGuBgidJ9OB4ku6bUEznXQ=";
-            "aarch64-linux" = "";
-            "x86_64-darwin" = "";
-            "x86_64-linux" = "";
-          };
-        in
-        pkgs.stdenv.mkDerivation {
-          name = "genSeqDocs";
-          nativeBuildInputs = [ pkgs.makeWrapper pkgs.cacert ];
-          outputHashAlgo = "sha256";
-          outputHashMode = "recursive";
-          outputHash = hashes.${system};
-          buildInputs = with pkgs; [
-            lean-toolchain
-            gnutar
-            rsync
-            curl
-            findutils
-            gzip
-            jq
-            moreutils
-            gnused
-            git
-          ];
-          src = ./.;
-          REV = self.rev or (builtins.elemAt (builtins.split "-" self.dirtyRev) 0);
-          buildPhase = ''
-            git init -b main
-            git commit --allow-empty -m "Empty commit"
-            git remote add origin git@github.com:provables/synthetic.git
-            TEMP_REV=$(git rev-parse HEAD)
-            mkdir -p $out
-            export HOME=$(mktemp -d)
-            lake exe cache get
-            DOCGEN_SRC="github" lake build Basic:docs --verbose --no-ansi
-            find .lake/build/doc \( -name \*.trace -or -name \*.hash \) -delete
-            find .lake/build/doc -type f -exec sed -i -e 's|'$(pwd)'|/base|g' '{}' \;
-            find .lake/build/doc -type f -exec sed -i -e 's|'$TEMP_REV'|'$REV'|g' '{}' \;
-            rsync -a .lake/build/doc $out/
+        inherit (lean-toolchain-nix.lib.${system}) gitRecording gitReplaying;
+        fakeGit = pkgs.writeShellApplication {
+          name = "git";
+          text = ''
+            case "$1" in
+            "remote")
+              echo "git@github.com:provables/synthetic.git" ;;
+            "rev-parse")
+              echo "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" ;;
+            esac
           '';
-          dontFixup = true;
         };
 
-      genseqLib =
-        let
-          hashes = {
-            "aarch64-darwin" = "sha256-/3vpZRrQFpSHN0m5HawFJu5CqepK77I+d6XhS2mFYFo=";
-            "aarch64-linux" = "";
-            "x86_64-darwin" = "";
-            "x86_64-linux" = "";
+        genSeqDocs =
+          let
+            hashes = {
+              "aarch64-darwin" = "sha256-d+ywWpS2Im+c6OOdV7x75sGuBgidJ9OB4ku6bUEznXQ=";
+              "aarch64-linux" = "";
+              "x86_64-darwin" = "";
+              "x86_64-linux" = "";
+            };
+          in
+          pkgs.stdenv.mkDerivation {
+            name = "genSeqDocs";
+            nativeBuildInputs = [ pkgs.makeWrapper pkgs.cacert ];
+            outputHashAlgo = "sha256";
+            outputHashMode = "recursive";
+            outputHash = hashes.${system};
+            buildInputs = with pkgs; [
+              lean-toolchain
+              gnutar
+              rsync
+              curl
+              findutils
+              gzip
+              jq
+              moreutils
+              gnused
+              git
+            ];
+            src = ./.;
+            REV = self.rev or (builtins.elemAt (builtins.split "-" self.dirtyRev) 0);
+            buildPhase = ''
+              git init -b main
+              git commit --allow-empty -m "Empty commit"
+              git remote add origin git@github.com:provables/synthetic.git
+              TEMP_REV=$(git rev-parse HEAD)
+              mkdir -p $out
+              export HOME=$(mktemp -d)
+              lake exe cache get
+              DOCGEN_SRC="github" lake build Basic:docs --verbose --no-ansi
+              find .lake/build/doc \( -name \*.trace -or -name \*.hash \) -delete
+              find .lake/build/doc -type f -exec sed -i -e 's|'$(pwd)'|/base|g' '{}' \;
+              find .lake/build/doc -type f -exec sed -i -e 's|'$TEMP_REV'|'$REV'|g' '{}' \;
+              rsync -a .lake/build/doc $out/
+            '';
+            dontFixup = true;
           };
-        in
-        pkgs.stdenv.mkDerivation {
-          __structuredAttrs = true;
-          unsafeDiscardReferences.out = true;
-          name = "genseqlib";
-          nativeBuildInputs = [ pkgs.makeWrapper pkgs.cacert ];
-          outputHashAlgo = "sha256";
-          outputHashMode = "recursive";
-          outputHash = hashes.${system};
-          buildInputs = with pkgs; [
-            lean-toolchain
-            gnutar
-            rsync
-            git
-            curl
-            findutils
-            gnused
-            gzip
-            jq
-            moreutils
-          ];
-          src = ./.;
-          buildPhase = ''
-            mkdir -p $out
-            export HOME=$(mktemp -d)
-            lake exe cache get
-            lake build GenSeq
-            for f in $(find .lake/build -name \*.trace); do
-              jq '.log[].message = ""' "$f" | sponge "$f"
-            done
-            find .lake/build -name \*.trace -exec sed -i -e 's|'$(pwd)'|/base|g' '{}' \;
-            rsync -a .lake/build/ $out
-          '';
-          phases = [ "unpackPhase" "buildPhase" ];
-        };
+
+        genseqLib =
+          let
+            hashes = {
+              "aarch64-darwin" = "sha256-/3vpZRrQFpSHN0m5HawFJu5CqepK77I+d6XhS2mFYFo=";
+              "aarch64-linux" = "";
+              "x86_64-darwin" = "";
+              "x86_64-linux" = "";
+            };
+          in
+          pkgs.stdenv.mkDerivation {
+            __structuredAttrs = true;
+            unsafeDiscardReferences.out = true;
+            name = "genseqlib";
+            nativeBuildInputs = [ pkgs.makeWrapper pkgs.cacert ];
+            outputHashAlgo = "sha256";
+            outputHashMode = "recursive";
+            outputHash = hashes.${system};
+            buildInputs = with pkgs; [
+              lean-toolchain
+              gnutar
+              rsync
+              git
+              curl
+              findutils
+              gnused
+              gzip
+              jq
+              moreutils
+            ];
+            src = ./.;
+            buildPhase = ''
+              mkdir -p $out
+              export HOME=$(mktemp -d)
+              lake exe cache get
+              lake build GenSeq
+              for f in $(find .lake/build -name \*.trace); do
+                jq '.log[].message = ""' "$f" | sponge "$f"
+              done
+              find .lake/build -name \*.trace -exec sed -i -e 's|'$(pwd)'|/base|g' '{}' \;
+              rsync -a .lake/build/ $out
+            '';
+            phases = [ "unpackPhase" "buildPhase" ];
+          };
 
         genseqBin =
           let
             hashes = {
-              "aarch64-darwin" = "sha256-2FYuNzCXw874HvdVZ2w6WaAiSs1Jlc7Z516cuqg2PMI=";
+              "aarch64-darwin" = "";
               "aarch64-linux" = "";
               "x86_64-darwin" = "";
               "x86_64-linux" = "sha256-JqILThXmd4nApW3jctABv/+YTh+EohGf4rdGooDs/U4=";
@@ -159,6 +159,75 @@
             '';
             dontFixup = true;
           };
+
+        genseqDeps = pkgs.stdenv.mkDerivation {
+          name = "genseqDeps";
+          buildInputs = [
+            lean-toolchain
+            gitRecording
+            pkgs.rsync
+            pkgs.curl
+            pkgs.gnutar
+            pkgs.gzip
+            pkgs.findutils
+          ];
+          nativeBuildInputs = [ pkgs.makeWrapper pkgs.cacert ];
+          outputHashAlgo = "sha256";
+          outputHashMode = "recursive";
+          outputHash = "sha256-9Y/v5BhYhWynKGtqarpWLWV/e/kaPhzBrxRbD8eq8oI=";
+          phases = [ "unpackPhase" "buildPhase" ];
+          src = builtins.path {
+            path = ./.;
+            name = "genseq-src";
+            filter = path: type: baseNameOf path != ".lake";
+          };
+          buildPhase = ''
+            mkdir -p $out
+            export HOME=$(mktemp -d)
+            export GITLOG=$(pwd)/gitlog
+            export GITBASE=$(pwd)
+            lake exe cache get
+            lake build Sequencelib.Meta.OEISTacticHeavy
+            lake build genseq
+            for f in $(find .lake/packages -name .git -type d); do
+                rm -rf $f
+                mkdir -p $f
+            done
+            GZIP=-n tar --sort=name \
+                --mtime="UTC 1970-01-01" \
+                --owner=0 --group=0 --numeric-owner --format=gnu \
+                -zcf $out/packages.tgz .lake/packages
+            cp -r $GITLOG $out/.gitlog
+            cp lakefile.toml $out/
+          '';
+        };
+
+        genseqFromDeps = pkgs.stdenv.mkDerivation {
+          name = "genseqFromDeps";
+          src = builtins.path {
+            path = ./.;
+            name = "genseq-src";
+            filter = path: type: baseNameOf path != ".lake";
+          };
+          buildInputs = [
+            genseqDeps
+            gitReplaying
+            pkgs.gnutar
+            lean-toolchain
+            pkgs.rsync
+          ];
+          phases = [ "unpackPhase" "buildPhase" ];
+          buildPhase = ''
+            mkdir -p $out
+            export HOME=$(mktemp -d)
+            export GITLOG=${genseqDeps}/.gitlog
+            export GITBASE=$(pwd)
+            tar zxf ${genseqDeps}/packages.tgz
+            lake build genseq
+            rsync -a .lake/ $out
+          '';
+        };
+
         genseq = pkgs.stdenv.mkDerivation {
           name = "genseq";
           nativeBuildInputs = [ pkgs.makeWrapper ];
@@ -182,7 +251,7 @@
           '';
         };
         python = pkgs.python313.withPackages (ps: [ ps.supervisor ps.ipython ]);
-        
+
         sGenseq = pkgs.writeShellApplication {
           name = "sgenseq";
           runtimeInputs = with pkgs; [
@@ -293,22 +362,48 @@
           default = supervisedGenseq;
           genseq = supervisedGenseq;
           sgenseq = sGenseq;
-          inherit genseqLib genSeqDocs fakeGit genseqBin;
+          inherit genseqLib genSeqDocs fakeGit genseqBin genseqDeps genseqFromDeps;
         };
 
-        devShell = shell {
-          name = "gen-seq";
-          buildInputs = with pkgs; [
-            lean-toolchain
-            elan
-            go-task
-            python
-            uv
-            findutils
-            lsof
-            supervisedGenseq
-          ] ++ lib.optional stdenv.isDarwin apple-sdk_14;
+        devShells = {
+          default = shell {
+            name = "gen-seq";
+            buildInputs = with pkgs; [
+              lean-toolchain
+              elan
+              go-task
+              python
+              uv
+              findutils
+              lsof
+            ] ++ lib.optional stdenv.isDarwin apple-sdk_14;
+          };
+          plain = shell {
+            name = "gen-seq";
+            buildInputs = with pkgs; [
+              lean-toolchain
+              elan
+              go-task
+              python
+              uv
+              findutils
+              lsof
+            ] ++ lib.optional stdenv.isDarwin apple-sdk_14;
+          };
         };
+        # devShell = shell {
+        #   name = "gen-seq";
+        #   buildInputs = with pkgs; [
+        #     lean-toolchain
+        #     elan
+        #     go-task
+        #     python
+        #     uv
+        #     findutils
+        #     lsof
+        #     supervisedGenseq
+        #   ] ++ lib.optional stdenv.isDarwin apple-sdk_14;
+        # };
       }
     );
 }
