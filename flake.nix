@@ -11,18 +11,7 @@
         pkgs = nixpkgs.legacyPackages.${system};
         shell = shell-utils.myShell.${system};
         lean-toolchain = lean-toolchain-nix.packages.${system}.lean-toolchain-4_27;
-        inherit (lean-toolchain-nix.lib.${system}) gitRecording gitReplaying;
-        fakeGit = pkgs.writeShellApplication {
-          name = "git";
-          text = ''
-            case "$1" in
-            "remote")
-              echo "git@github.com:provables/synthetic.git" ;;
-            "rev-parse")
-              echo "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" ;;
-            esac
-          '';
-        };
+        inherit (lean-toolchain-nix.lib.${system}) buildLeanDeps buildLeanPackageFromDeps;
 
         genSeqDocs =
           let
@@ -114,117 +103,41 @@
             phases = [ "unpackPhase" "buildPhase" ];
           };
 
-        genseqBin =
+        genseqBinDeps =
           let
             hashes = {
-              "aarch64-darwin" = "";
+              "aarch64-darwin" = "sha256-OnPtLoqg6Cb6o6MQebEi7p6G1pZ2OewKaKOYBm4/q/c=";
               "aarch64-linux" = "";
               "x86_64-darwin" = "";
-              "x86_64-linux" = "sha256-JqILThXmd4nApW3jctABv/+YTh+EohGf4rdGooDs/U4=";
+              "x86_64-linux" = "";
             };
           in
-          pkgs.stdenv.mkDerivation {
-            __structuredAttrs = true;
-            unsafeDiscardReferences.out = true;
-            name = "genseqBin";
-            nativeBuildInputs = [ pkgs.makeWrapper pkgs.cacert ];
-            outputHashAlgo = "sha256";
-            outputHashMode = "recursive";
+          buildLeanDeps {
+            name = "genseqBinDeps";
+            src = ./.;
             outputHash = hashes.${system};
-            buildInputs = with pkgs; [
-              lean-toolchain
-              gnutar
-              rsync
-              git
-              curl
-              findutils
-              gzip
-            ];
-            src = builtins.path {
-              path = ./.;
-              name = "genseq-src";
-              filter = path: type: baseNameOf path != ".lake";
-            };
+            leanVersion = "4.27.0";
             buildPhase = ''
-              mkdir -p $out/{bin,lib/packages}
-              export HOME=$(mktemp -d)
               lake exe cache get
               lake build Sequencelib.Meta.OEISTacticHeavy
               lake build genseq
-              cp .lake/build/bin/genseq $out/bin/genseq
-              rsync -a .lake/build/lib/lean $out/lib/
-              rsync -a .lake/packages/ $out/lib/packages/
-              find $out/lib -type f !  \( -name "*.olean" -o -name "*.olean.private" \) -delete
-              find $out/lib -depth -type d -empty -delete
             '';
-            dontFixup = true;
           };
 
-        genseqDeps = pkgs.stdenv.mkDerivation {
-          name = "genseqDeps";
-          buildInputs = [
-            lean-toolchain
-            gitRecording
-            pkgs.rsync
-            pkgs.curl
-            pkgs.gnutar
-            pkgs.gzip
-            pkgs.findutils
-          ];
-          nativeBuildInputs = [ pkgs.makeWrapper pkgs.cacert ];
-          outputHashAlgo = "sha256";
-          outputHashMode = "recursive";
-          outputHash = "sha256-9Y/v5BhYhWynKGtqarpWLWV/e/kaPhzBrxRbD8eq8oI=";
+        genseqBin = buildLeanPackageFromDeps {
+          name = "genseqBin";
+          src = ./.;
+          leanVersion = "4.27.0";
+          deps = genseqBinDeps;
+          buildInputs = [ pkgs.rsync ];
           phases = [ "unpackPhase" "buildPhase" ];
-          src = builtins.path {
-            path = ./.;
-            name = "genseq-src";
-            filter = path: type: baseNameOf path != ".lake";
-          };
           buildPhase = ''
-            mkdir -p $out
-            export HOME=$(mktemp -d)
-            export GITLOG=$(pwd)/gitlog
-            export GITBASE=$(pwd)
-            lake exe cache get
             lake build Sequencelib.Meta.OEISTacticHeavy
             lake build genseq
-            for f in $(find .lake/packages -name .git -type d); do
-                rm -rf $f
-                mkdir -p $f
-            done
-            GZIP=-n tar --sort=name \
-                --mtime="UTC 1970-01-01" \
-                --owner=0 --group=0 --numeric-owner --format=gnu \
-                -zcf $out/packages.tgz .lake/packages
-            cp -r $GITLOG $out/.gitlog
-            cp lakefile.toml $out/
-          '';
-        };
-
-        genseqFromDeps = pkgs.stdenv.mkDerivation {
-          name = "genseqFromDeps";
-          src = builtins.path {
-            path = ./.;
-            name = "genseq-src";
-            filter = path: type: baseNameOf path != ".lake";
-          };
-          buildInputs = [
-            genseqDeps
-            gitReplaying
-            pkgs.gnutar
-            lean-toolchain
-            pkgs.rsync
-          ];
-          phases = [ "unpackPhase" "buildPhase" ];
-          buildPhase = ''
-            mkdir -p $out
-            export HOME=$(mktemp -d)
-            export GITLOG=${genseqDeps}/.gitlog
-            export GITBASE=$(pwd)
-            tar zxf ${genseqDeps}/packages.tgz
-            lake build genseq
-            rsync -a .lake/ $out
+            mkdir -p $out/{bin,lib}
+            cp .lake/build/bin/genseq $out/bin
+            rsync -a .lake/build/lib/lean $out/lib/
+            rsync -a .lake/packages/ $out/lib/packages/
           '';
         };
 
@@ -362,7 +275,7 @@
           default = supervisedGenseq;
           genseq = supervisedGenseq;
           sgenseq = sGenseq;
-          inherit genseqLib genSeqDocs fakeGit genseqBin genseqDeps genseqFromDeps;
+          inherit genseqLib genSeqDocs genseqBinDeps genseqBin;
         };
 
         devShells = {
@@ -391,19 +304,6 @@
             ] ++ lib.optional stdenv.isDarwin apple-sdk_14;
           };
         };
-        # devShell = shell {
-        #   name = "gen-seq";
-        #   buildInputs = with pkgs; [
-        #     lean-toolchain
-        #     elan
-        #     go-task
-        #     python
-        #     uv
-        #     findutils
-        #     lsof
-        #     supervisedGenseq
-        #   ] ++ lib.optional stdenv.isDarwin apple-sdk_14;
-        # };
       }
     );
 }
