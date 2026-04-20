@@ -109,7 +109,7 @@
               "aarch64-darwin" = "sha256-OnPtLoqg6Cb6o6MQebEi7p6G1pZ2OewKaKOYBm4/q/c=";
               "aarch64-linux" = "";
               "x86_64-darwin" = "";
-              "x86_64-linux" = "";
+              "x86_64-linux" = "sha256-jHpRN/MndDX5L5vsTsfzY8dJ6n7udzIHxSnKFflGqa0=";
             };
           in
           buildLeanDeps {
