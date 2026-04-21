@@ -105,11 +105,11 @@
         "shell-utils": "shell-utils"
       },
       "locked": {
-        "lastModified": 1776718532,
-        "narHash": "sha256-FfhzpcQG80eabdmFlZrsR+SAqI6nrMRlpDzFz5iAFGI=",
+        "lastModified": 1776797208,
+        "narHash": "sha256-678T6L840/4Xs+m+EK2YfEUYiY5QWH2MDJ7X2P0SLNU=",
         "owner": "provables",
         "repo": "lean-toolchain-nix",
-        "rev": "0fcc48652c74c09b0bab6beacc8e6b0e534f66ec",
+        "rev": "44136e47b4566f135adcc450c2d8abc8b24c1edd",
         "type": "github"
       },
       "original": {
