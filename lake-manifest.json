@@ -5,7 +5,7 @@
    "type": "git",
    "subDir": null,
    "scope": "",
-   "rev": "3996d52fbd9357abfea0f25b0f8eb76b355a2091",
+   "rev": "13c32cdd5f8dd1ceda396bca4a8506d706ddaf7e",
    "name": "sequencelib",
    "manifestFile": "lake-manifest.json",
    "inputRev": "ailoop",
